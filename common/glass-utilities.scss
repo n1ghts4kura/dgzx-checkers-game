@@ -1,0 +1,70 @@
+// ==========================================
+// Liquid Glass 毛玻璃 Mixin & 排版工具
+// ==========================================
+@import './design-tokens';
+
+// ── 表面效果 ──
+
+@mixin glass-surface($blur: 16px) {
+  background: $color-glass-surface;
+  backdrop-filter: blur($blur);
+  -webkit-backdrop-filter: blur($blur);
+}
+
+@mixin glass-gradient {
+  background: linear-gradient(135deg, rgba(209, 250, 229, 0.4) 0%, rgba(209, 250, 229, 0.1) 100%);
+}
+
+@mixin inner-glow {
+  box-shadow: inset 1px 1px 0px 0px $color-glass-stroke;
+}
+
+@mixin glass-border {
+  border: 1px solid $color-glass-stroke;
+}
+
+@mixin emerald-shadow($y: 4px, $blur: 30px, $opacity: 0.1) {
+  box-shadow: 0px $y $blur rgba(16, 185, 129, $opacity);
+}
+
+// ── 排版 ──
+
+@mixin text-headline-lg-mobile {
+  font-family: $font-headline;
+  font-size: $fs-headline-lg-mobile;
+  line-height: $lh-headline-lg-mobile;
+  font-weight: 700;
+}
+
+@mixin text-body-md {
+  font-family: $font-body;
+  font-size: $fs-body-md;
+  line-height: $lh-body-md;
+  font-weight: 400;
+}
+
+@mixin text-label-bold {
+  font-family: $font-body;
+  font-size: $fs-label-bold;
+  line-height: $lh-label-bold;
+  font-weight: 700;
+  letter-spacing: $ls-label-bold;
+}
+
+// ── 布局 ──
+
+@mixin fixed-top {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+}
+
+@mixin fixed-bottom {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+}
