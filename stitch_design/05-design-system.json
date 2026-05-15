@@ -1,0 +1,133 @@
+{
+  "name": "Liquid Glass",
+  "description": "A sophisticated evolution of minimalism merging geometric constructivism with fluid dynamics. Glassmorphism with emerald palette, translucent layering, and organic gradients.",
+  "colorMode": "LIGHT",
+  "colorVariant": "FIDELITY",
+  "customColor": "#10b981",
+  "headlineFont": "MANROPE",
+  "bodyFont": "HANKEN_GROTESK",
+  "labelFont": "HANKEN_GROTESK",
+  "roundness": "ROUND_FULL",
+  "namedColors": {
+    "background": "#f7f9fb",
+    "surface": "#f7f9fb",
+    "surface-dim": "#d8dadc",
+    "surface-bright": "#f7f9fb",
+    "surface-container-lowest": "#ffffff",
+    "surface-container-low": "#f2f4f6",
+    "surface-container": "#eceef0",
+    "surface-container-high": "#e6e8ea",
+    "surface-container-highest": "#e0e3e5",
+    "on-surface": "#191c1e",
+    "on-surface-variant": "#3c4a42",
+    "on-background": "#191c1e",
+    "inverse-surface": "#2d3133",
+    "inverse-on-surface": "#eff1f3",
+    "outline": "#6c7a71",
+    "outline-variant": "#bbcabf",
+    "surface-tint": "#006c49",
+    "primary": "#006c49",
+    "on-primary": "#ffffff",
+    "primary-container": "#10b981",
+    "on-primary-container": "#00422b",
+    "inverse-primary": "#4edea3",
+    "secondary": "#006c4b",
+    "on-secondary": "#ffffff",
+    "secondary-container": "#64f9bc",
+    "on-secondary-container": "#00714e",
+    "tertiary": "#006c4e",
+    "on-tertiary": "#ffffff",
+    "tertiary-container": "#37b78a",
+    "on-tertiary-container": "#00422e",
+    "error": "#ba1a1a",
+    "on-error": "#ffffff",
+    "error-container": "#ffdad6",
+    "on-error-container": "#93000a",
+    "primary-fixed": "#6ffbbe",
+    "primary-fixed-dim": "#4edea3",
+    "on-primary-fixed": "#002113",
+    "on-primary-fixed-variant": "#005236",
+    "secondary-fixed": "#68fcbf",
+    "secondary-fixed-dim": "#45dfa4",
+    "on-secondary-fixed": "#002114",
+    "on-secondary-fixed-variant": "#005137",
+    "tertiary-fixed": "#80f9c8",
+    "tertiary-fixed-dim": "#62dcad",
+    "on-tertiary-fixed": "#002115",
+    "on-tertiary-fixed-variant": "#00513a",
+    "glass-surface": "rgba(209, 250, 229, 0.4)",
+    "glass-stroke": "rgba(255, 255, 255, 0.6)",
+    "liquid-accent": "#A7F3D0",
+    "deep-emerald": "#064E3B"
+  },
+  "typography": {
+    "headline-xl": {
+      "fontFamily": "Manrope",
+      "fontSize": "48px",
+      "fontWeight": "800",
+      "lineHeight": "56px",
+      "letterSpacing": "-0.02em"
+    },
+    "headline-lg": {
+      "fontFamily": "Manrope",
+      "fontSize": "32px",
+      "fontWeight": "700",
+      "lineHeight": "40px",
+      "letterSpacing": "-0.01em"
+    },
+    "headline-lg-mobile": {
+      "fontFamily": "Manrope",
+      "fontSize": "28px",
+      "fontWeight": "700",
+      "lineHeight": "36px"
+    },
+    "body-md": {
+      "fontFamily": "Hanken Grotesk",
+      "fontSize": "16px",
+      "fontWeight": "400",
+      "lineHeight": "24px"
+    },
+    "body-sm": {
+      "fontFamily": "Hanken Grotesk",
+      "fontSize": "14px",
+      "fontWeight": "400",
+      "lineHeight": "20px"
+    },
+    "label-bold": {
+      "fontFamily": "Hanken Grotesk",
+      "fontSize": "12px",
+      "fontWeight": "700",
+      "lineHeight": "16px",
+      "letterSpacing": "0.05em"
+    }
+  },
+  "spacing": {
+    "unit": "8px",
+    "container-padding-mobile": "20px",
+    "container-padding-desktop": "40px",
+    "gutter": "24px"
+  },
+  "rounded": {
+    "sm": "0.5rem",
+    "DEFAULT": "1rem",
+    "md": "1.5rem",
+    "lg": "2rem",
+    "xl": "3rem",
+    "full": "9999px"
+  },
+  "elevation": {
+    "levels": [
+      {"name": "backdrop-blur", "value": "backdrop-filter: blur(16px)"},
+      {"name": "inner-glow", "value": "1px solid white stroke at 60% opacity on top/left edges"},
+      {"name": "soft-shadow", "value": "rgba(16, 185, 129, 0.1) tinted shadow"},
+      {"name": "z-axis", "value": "Higher elevation = increased blur + opacity"}
+    ]
+  },
+  "components": {
+    "glassButtons": "Primary: solid Emerald #10B981 with white text. Secondary: translucent glass-surface with 1px emerald border",
+    "liquidCards": "30px radius, glass blur, inner glow white stroke",
+    "glassInputs": "Nearly transparent (10% opacity) background, 2px bottom-border emerald highlight on focus",
+    "translucentChips": "Pill-shaped, backdrop-filter: blur(4px), secondary emerald tint",
+    "floatingNavigation": "Floating glass dock, 30px radius, positioned away from screen edges"
+ }
+}

@@ -2,3 +2,6 @@ node_modules/
 unpackage/
 .hbuilderx/
 .DS_Store
+
+# Origin Game
+origin_game/
