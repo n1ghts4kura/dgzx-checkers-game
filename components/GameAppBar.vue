@@ -44,7 +44,7 @@ export default {
   justify-content: space-between;
   align-items: center;
   padding: 0 $sp-gutter;
-  height: 158rpx;
+  height: 73px;
 }
 
 .app-bar__btn {

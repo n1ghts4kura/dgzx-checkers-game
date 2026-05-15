@@ -1,33 +1,33 @@
 <template>
   <view class="sidebar-wrapper">
-    <!-- 遮罩 -->
     <view
       class="sidebar-backdrop"
       :class="{ 'sidebar-backdrop--visible': visible }"
-      @click="$emit('close')"
+      @tap="$emit('close')"
     />
 
-    <!-- 抽屉面板 -->
     <view
       class="sidebar-drawer"
       :class="{ 'sidebar-drawer--open': visible }"
     >
       <view class="sidebar-content">
-        <!-- 创建新棋盘 -->
-        <view class="btn-create">
+        <!-- Create new board -->
+        <view class="btn-create" @tap="$emit('create-level')">
           <IconSprite name="add_circle" :size="24" />
           <text class="btn-create__text">创建新棋盘</text>
         </view>
 
-        <!-- 棋盘列表 -->
+        <!-- Board list -->
         <nav class="nav-list">
-          <view class="nav-item nav-item--active">
-            <IconSprite name="grid_on" :size="20" />
-            <text class="nav-item__text">棋盘 - 棋盘-1</text>
-          </view>
-          <view class="nav-item">
-            <IconSprite name="apps" :size="20" />
-            <text class="nav-item__text">棋盘 - 棋盘-2</text>
+          <view
+            v-for="(name, idx) in levelNames"
+            :key="idx"
+            class="nav-item"
+            :class="{ 'nav-item--active': idx === activeLevelIndex }"
+            @tap="$emit('select-level', idx)"
+          >
+            <IconSprite :name="idx === activeLevelIndex ? 'grid_on' : 'apps'" :size="20" />
+            <text class="nav-item__text">棋盘 - {{ name }}</text>
           </view>
         </nav>
       </view>
@@ -42,9 +42,11 @@ export default {
   name: 'SidebarDrawer',
   components: { IconSprite },
   props: {
-    visible: { type: Boolean, default: false }
+    visible: { type: Boolean, default: false },
+    levelNames: { type: Array, default: () => ['棋盘-1', '棋盘-2'] },
+    activeLevelIndex: { type: Number, default: 0 }
   },
-  emits: ['close']
+  emits: ['close', 'select-level', 'create-level']
 }
 </script>
 
@@ -76,7 +78,9 @@ export default {
   bottom: 0;
   z-index: 70;
   width: 65%;
-  @include glass-surface(24px);
+  background: $color-glass-surface;
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
   border-right: 1px solid $color-glass-stroke;
   box-shadow: 4px 0 30px rgba(0, 0, 0, 0.15);
   transform: translateX(-100%);
@@ -105,7 +109,10 @@ export default {
   align-items: center;
   justify-content: center;
   gap: 16rpx;
-  @include text-headline-lg-mobile;
+  font-family: $font-headline;
+  font-size: $fs-headline-lg-mobile;
+  line-height: $lh-headline-lg-mobile;
+  font-weight: 700;
   box-shadow: 0 8rpx 24rpx rgba(16, 185, 129, 0.2);
   transition: transform 0.15s;
 
@@ -134,7 +141,8 @@ export default {
   padding: 32rpx;
   border-radius: $radius-default;
   color: $color-on-surface-variant;
-  @include text-body-md;
+  font-family: $font-body;
+  font-size: $fs-body-md;
   transition: background-color 0.2s;
 
   &--active {
