@@ -71,5 +71,5 @@ export function calculateSettlementScore(moveHistory, gameTimeLeft, gameWon, sco
 }
 
 export function formatScoreText(scoreValue) {
-  return `${scoreValue.toString().padStart(3, '0')}分`;
+  return `${scoreValue.toString().padStart(3, '0')}`;
 }
