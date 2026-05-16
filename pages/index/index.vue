@@ -28,22 +28,77 @@
     <!-- Board area -->
     <main class="board-area">
       <view id="canvas-wrapper">
-        <canvas id="game-canvas" @tap="handleCanvasTap" />
+        <canvas
+          id="game-canvas"
+          @tap="handleCanvasTap"
+          :style="{ opacity: timerStarted ? 1 : 0, transition: 'opacity 250ms ease' }"
+        />
+
+        <!-- Cover layer (before game starts) -->
+        <view
+          class="cover-layer"
+          :style="{ opacity: timerStarted ? 0 : 1, pointerEvents: timerStarted ? 'none' : 'auto', transition: 'opacity 250ms ease' }"
+          @tap="startGame"
+        >
+          <view class="cover-layer__inner">
+            <text class="cover-layer__icon">▶</text>
+            <text class="cover-layer__text">点击开始</text>
+          </view>
+        </view>
+
+        <!-- Victory floating message -->
+        <view v-if="gameWon" class="victory-overlay">
+          <text class="victory-overlay__text">🎉 胜利！棋子已到达顶部！</text>
+        </view>
+      </view>
+
+      <!-- Warning toast -->
+      <view class="warning-toast" :class="{ 'warning-toast--visible': warningVisible }">
+        <text class="warning-toast__text">快落子！要扣分啦！</text>
       </view>
     </main>
 
     <!-- Bottom dock -->
     <BottomDock
-      :score="score"
+      :score="scoreDisplayText"
       :game-time-formatted="gameTimeFormatted"
       :move-time-formatted="moveTimeFormatted"
       :move-timer-warning="moveTimerWarning"
       :move-timer-red-intensity="moveTimerRedIntensity"
       :move-timer-bounce="moveTimerBounce"
       :can-undo="history.length > 0"
+      :score-deducting="scoreDeductionAnimating"
       @undo="handleUndo"
+      @hint="handleHint"
       @restart="handleRestart"
     />
+
+    <!-- Settlement modal -->
+    <view v-if="settlementVisible" class="settlement-overlay" @tap="dismissSettlement">
+      <view class="settlement-card" @tap.stop>
+        <text
+          class="settlement-title"
+          :style="{ color: settlement.won ? '#27ae60' : '#e74c3c' }"
+        >{{ settlement.won ? '🎉 恭喜通关！' : '⏰ 时间到！' }}</text>
+        <view class="settlement-row">
+          <text class="settlement-label">完成度因子</text>
+          <text class="settlement-value">{{ settlement.factor1 }}</text>
+        </view>
+        <view class="settlement-row">
+          <text class="settlement-label">积分因子</text>
+          <text class="settlement-value">{{ settlement.factor2 }}</text>
+        </view>
+        <view class="settlement-row settlement-row--final">
+          <text class="settlement-label">最终得分</text>
+          <text class="settlement-value settlement-value--big">{{ settlement.finalScore }} / 100</text>
+        </view>
+        <view class="settlement-actions">
+          <view class="settlement-btn settlement-btn--primary" @tap="handleRestart">
+            <text>再来一局</text>
+          </view>
+        </view>
+      </view>
+    </view>
   </view>
 </template>
 
@@ -98,6 +153,12 @@ export default {
       score: INITIAL_SCORE,
       lastPenaltyThreshold: 0,
       moveTimerWarning: false,
+      warningVisible: false,
+      warningSuppressed: false,
+      scoreDeductionQueue: [],
+      scoreDeductionAnimating: false,
+      scoreDeductionTimer: null,
+      currentDeductionDisplay: null,
 
       // Hint
       hintPath: null,
@@ -154,6 +215,12 @@ export default {
     },
     formattedScore() {
       return formatScoreText(this.score)
+    },
+    scoreDisplayText() {
+      if (this.currentDeductionDisplay !== null) {
+        return `-${this.currentDeductionDisplay}`
+      }
+      return this.formattedScore
     }
   },
 
@@ -303,6 +370,7 @@ export default {
       this.moveTimerWarning = false
       this.hintPath = null
       this.settlementVisible = false
+      this.clearScoreDeductionAnimation()
 
       this.redraw()
     },
@@ -328,10 +396,6 @@ export default {
         this.moveTimeElapsed += now - lastMoveTick
         lastMoveTick = now
         this.checkMovePenalties()
-
-        // Warning bar (5s before next threshold)
-        const nextThreshold = getNextThresholdTime(this.moveTimeElapsed)
-        this.moveTimerWarning = (nextThreshold - this.moveTimeElapsed <= 5000 && nextThreshold > this.moveTimeElapsed)
       }, 100)
     },
 
@@ -350,15 +414,81 @@ export default {
       this.moveTimeElapsed = 0
       this.lastPenaltyThreshold = 0
       this.moveTimerWarning = false
+      this.warningVisible = false
+      this.warningSuppressed = false
     },
 
     checkMovePenalties() {
+      // Update warning visibility (slide in when entering warning zone)
+      const nextThreshold = getNextThresholdTime(this.moveTimeElapsed)
+      const inWarning = (nextThreshold - this.moveTimeElapsed <= 5000 && nextThreshold > this.moveTimeElapsed)
+      this.moveTimerWarning = inWarning
+      this.warningVisible = inWarning && !this.warningSuppressed
+
+      // Apply penalties
       const thresholdsCrossed = getPenaltyThresholdsCrossed(this.moveTimeElapsed)
       if (thresholdsCrossed > this.lastPenaltyThreshold) {
         const newPenalties = thresholdsCrossed - this.lastPenaltyThreshold
-        this.score = Math.max(SCORE_FLOOR, this.score - newPenalties * MOVE_TIME_PENALTY_PER_INTERVAL)
+        const penalty = newPenalties * MOVE_TIME_PENALTY_PER_INTERVAL
+        this.score = Math.max(SCORE_FLOOR, this.score - penalty)
         this.lastPenaltyThreshold = thresholdsCrossed
+        this.enqueueScoreDeduction(penalty)
+
+        // Slide out warning, then re-enable after 500ms
+        this.warningSuppressed = true
+        this.warningVisible = false
+        setTimeout(() => {
+          this.warningSuppressed = false
+          if (this.moveTimerWarning) {
+            this.warningVisible = true
+          }
+        }, 500)
       }
+    },
+
+    // ── Score deduction animation ──
+
+    clearScoreDeductionAnimation() {
+      if (this.scoreDeductionTimer) {
+        clearTimeout(this.scoreDeductionTimer)
+        this.scoreDeductionTimer = null
+      }
+      this.scoreDeductionQueue = []
+      this.scoreDeductionAnimating = false
+      this.currentDeductionDisplay = null
+    },
+
+    enqueueScoreDeduction(deduction) {
+      if (deduction <= 0) return
+      this.scoreDeductionQueue.push(deduction)
+      if (!this.scoreDeductionAnimating) {
+        this.playNextScoreDeduction()
+      }
+    },
+
+    playNextScoreDeduction() {
+      if (this.scoreDeductionQueue.length === 0) {
+        this.scoreDeductionAnimating = false
+        this.currentDeductionDisplay = null
+        return
+      }
+
+      const deduction = this.scoreDeductionQueue.shift()
+      this.currentDeductionDisplay = deduction
+      this.scoreDeductionAnimating = true
+
+      this.scoreDeductionTimer = setTimeout(() => {
+        this.scoreDeductionTimer = null
+        this.playNextScoreDeduction()
+      }, 1500)
+    },
+
+    // ── Start game ──
+
+    startGame() {
+      if (this.timerStarted) return
+      this.startTimers()
+      this.redraw()
     },
 
     // ── Game actions ──
@@ -455,6 +585,7 @@ export default {
       this.axialToIndex = mapping.axialToIndex
 
       this.score = Math.max(SCORE_FLOOR, this.score - UNDO_SCORE_PENALTY)
+      this.clearScoreDeductionAnimation()
       this.resetMoveTimer()
       this.redraw()
     },
@@ -462,6 +593,7 @@ export default {
     handleRestart() {
       if (this.currentLevel) {
         this.stopTimers()
+        this.clearScoreDeductionAnimation()
         this.board = createEmptyBoard()
         this.boardColors = createEmptyColorLayer()
         loadLevelIntoBoard(this.board, this.boardColors, this.currentLevel)
@@ -509,6 +641,7 @@ export default {
 
     dismissSettlement() {
       this.settlementVisible = false
+      this.handleRestart()
     },
 
     // ── Level management ──
@@ -611,6 +744,107 @@ export default {
   height: 100%;
 }
 
+// ── Cover layer ──
+
+.cover-layer {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: fit-content;
+  height: fit-content;
+  padding: 18px;
+  background: rgba(255, 255, 255, 0.25);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 24rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 30;
+  box-shadow: 0 8rpx 32rpx rgba(0, 0, 0, 0.08);
+}
+
+.cover-layer__inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24rpx;
+}
+
+.cover-layer__icon {
+  font-size: 64rpx;
+  color: $color-primary;
+}
+
+.cover-layer__text {
+  font-family: $font-headline;
+  font-size: $fs-headline-lg-mobile;
+  font-weight: 700;
+  color: $color-on-surface;
+}
+
+// ── Victory overlay ──
+
+.victory-overlay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(46, 204, 113, 0.92);
+  padding: 32rpx 48rpx;
+  border-radius: 20rpx;
+  z-index: 30;
+  box-shadow: 0 10rpx 50rpx rgba(0, 0, 0, 0.2);
+  animation: victory-pulse 2s infinite;
+}
+
+.victory-overlay__text {
+  font-family: $font-headline;
+  font-size: $fs-headline-lg-mobile;
+  font-weight: 800;
+  color: white;
+  text-align: center;
+}
+
+@keyframes victory-pulse {
+  0% { transform: translate(-50%, -50%) scale(1); }
+  50% { transform: translate(-50%, -50%) scale(1.05); }
+  100% { transform: translate(-50%, -50%) scale(1); }
+}
+
+// ── Warning toast ──
+
+.warning-toast {
+  position: absolute;
+  top: 16rpx;
+  right: 16rpx;
+  z-index: 35;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid $color-error;
+  border-radius: 16rpx;
+  padding: 14rpx 28rpx;
+  box-shadow: 0 4rpx 24rpx rgba(186, 26, 26, 0.15);
+  transform: translateX(110%);
+  transition: transform 400ms cubic-bezier(0.09, 0.57, 0.30, 1.02);
+  pointer-events: none;
+}
+
+.warning-toast--visible {
+  transform: translateX(0);
+}
+
+.warning-toast__text {
+  font-family: $font-body;
+  font-size: $fs-body-sm;
+  color: $color-error;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
 // ── Settlement overlay ──
 
 .settlement-overlay {
@@ -673,12 +907,24 @@ export default {
   }
 }
 
-.settlement-hint {
-  font-family: $font-body;
-  font-size: $fs-body-sm;
-  color: $color-outline;
-  display: block;
+.settlement-actions {
+  display: flex;
+  justify-content: center;
+  margin-top: 32rpx;
+}
+
+.settlement-btn {
+  padding: 20rpx 48rpx;
+  border-radius: 16rpx;
+  font-family: $font-headline;
+  font-size: $fs-body-md;
+  font-weight: 700;
   text-align: center;
-  margin-top: 24rpx;
+
+  &--primary {
+    background: $color-primary;
+    color: $color-on-primary;
+    box-shadow: 0 4rpx 16rpx rgba(0, 108, 73, 0.3);
+  }
 }
 </style>
