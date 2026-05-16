@@ -23,31 +23,27 @@
       @close="sidebarVisible = false"
       @select-level="selectLevel"
       @create-level="createNewLevel"
+      @config-level="configLevel"
     />
 
     <!-- Board area -->
     <main class="board-area">
-      <view id="canvas-wrapper">
-        <!-- #ifdef MP -->
-        <canvas
-          type="2d"
-          id="game-canvas"
-          @tap="handleCanvasTap"
-          :style="{ opacity: timerStarted ? 1 : 0, transition: 'opacity 250ms ease' }"
+      <view class="board-container">
+        <BoardGrid
+          :board="board"
+          :board-colors="boardColors"
+          :player-pos="playerPos"
+          :selected="selected"
+          :jump-targets="jumpTargets"
+          :hint-path="hintPath"
+          :disabled="gameWon"
+          @cell-tap="handleCellTap"
         />
-        <!-- #endif -->
-        <!-- #ifndef MP -->
-        <canvas
-          id="game-canvas"
-          @tap="handleCanvasTap"
-          :style="{ opacity: timerStarted ? 1 : 0, transition: 'opacity 250ms ease' }"
-        />
-        <!-- #endif -->
 
         <!-- Cover layer (before game starts) -->
         <view
+          :class="{ 'cover-layer--hidden': timerStarted }"
           class="cover-layer"
-          :style="{ opacity: timerStarted ? 0 : 1, pointerEvents: timerStarted ? 'none' : 'auto', transition: 'opacity 250ms ease' }"
           @tap="startGame"
         >
           <view class="cover-layer__inner">
@@ -60,11 +56,11 @@
         <view v-if="gameWon" class="victory-overlay">
           <text class="victory-overlay__text">🎉 胜利！棋子已到达顶部！</text>
         </view>
-      </view>
 
-      <!-- Warning toast -->
-      <view class="warning-toast" :class="{ 'warning-toast--visible': warningVisible }">
-        <text class="warning-toast__text">快落子！要扣分啦！</text>
+        <!-- Warning toast -->
+        <view class="warning-toast" :class="{ 'warning-toast--visible': warningVisible }">
+          <text class="warning-toast__text">快落子！要扣分啦！</text>
+        </view>
       </view>
     </main>
 
@@ -115,9 +111,8 @@
 import GameAppBar from '@/components/GameAppBar.vue'
 import SidebarDrawer from '@/components/SidebarDrawer.vue'
 import BottomDock from '@/components/BottomDock.vue'
+import BoardGrid from '@/components/BoardGrid.vue'
 
-import { drawBoard } from '@/game-core/renderer.js'
-import { getBoardPos } from '@/game-core/coordinates.js'
 import { createEmptyBoard, createEmptyColorLayer, createAxialMapping, countObstacles } from '@/game-core/board.js'
 import { executeMove, saveStateSnapshot, findAllJumpsFrom } from '@/game-core/logic.js'
 import { solveGameBFS } from '@/game-core/solver.js'
@@ -133,7 +128,7 @@ import {
 } from '@/game-core/constants.js'
 
 export default {
-  components: { GameAppBar, SidebarDrawer, BottomDock },
+  components: { GameAppBar, SidebarDrawer, BottomDock, BoardGrid },
 
   data() {
     return {
@@ -144,6 +139,7 @@ export default {
       indexToAxial: new Map(),
       axialToIndex: new Map(),
       selected: null,
+      jumpTargets: [],
       moveCount: 0,
       remainingPieces: 0,
       moveHistory: [],
@@ -173,12 +169,6 @@ export default {
       hintPath: null,
 
       // UI
-      canvasEl: null,
-      canvasCtx: null,
-      canvasDpr: 1,
-      canvasW: 0,
-      canvasH: 0,
-      drawVersion: 0,
       sidebarVisible: false,
       settlementVisible: false,
       settlement: { factor1: '0', factor2: '0', finalScore: 0, won: false },
@@ -191,18 +181,6 @@ export default {
   },
 
   computed: {
-    boardState() {
-      return {
-        board: this.board,
-        boardColors: this.boardColors,
-        playerPos: this.playerPos,
-        indexToAxial: this.indexToAxial,
-        axialToIndex: this.axialToIndex,
-        selected: this.selected,
-        hoveredTarget: null,
-        hintPath: this.hintPath
-      }
-    },
     gameTimeFormatted() {
       const totalSec = Math.max(0, Math.ceil(this.gameTimeLeft / 1000))
       const min = Math.floor(totalSec / 60)
@@ -237,186 +215,11 @@ export default {
     this.initGame()
   },
 
-  mounted() {
-    // #ifdef H5
-    this.$nextTick(() => {
-      this.initCanvas()
-    })
-    // #endif
-    // #ifndef H5
-    this.$nextTick(() => {
-      this.initCanvas()
-    })
-    // #endif
-  },
-
   beforeDestroy() {
-    this.stopLoop()
-    // #ifdef H5
-    if (this._resizeObserver) {
-      this._resizeObserver.disconnect()
-      this._resizeObserver = null
-    }
-    // #endif
     this.stopTimers()
   },
 
   methods: {
-    // ── Canvas (platform-specific init, cross-platform draw/loop) ──
-
-    // #ifdef H5
-    initCanvas() {
-      const wrapper = document.getElementById('canvas-wrapper')
-      let el = document.getElementById('game-canvas')
-      if (!el || !wrapper) return
-
-      // Penetrate uni-app <uni-canvas> wrapper
-      if (el.tagName === 'UNI-CANVAS') {
-        const inner = el.querySelector('canvas')
-        if (inner) el = inner
-      }
-      if (!el.getContext) return
-
-      this.canvasEl = el
-      this.canvasDpr = window.devicePixelRatio || 1
-
-      this.resizeCanvas()
-      this.draw()
-      this.startLoop()
-
-      // Observe parent size changes
-      if (window.ResizeObserver) {
-        this._resizeObserver = new ResizeObserver(() => {
-          this.resizeCanvas()
-        })
-        this._resizeObserver.observe(wrapper)
-      }
-    },
-
-    resizeCanvas() {
-      if (!this.canvasEl) return
-      const wrapper = document.getElementById('canvas-wrapper')
-      if (!wrapper) return
-      const rect = wrapper.getBoundingClientRect()
-      if (rect.width === 0 || rect.height === 0) return
-      this.canvasW = rect.width
-      this.canvasH = rect.height
-      this.canvasEl.width = rect.width * this.canvasDpr
-      this.canvasEl.height = rect.height * this.canvasDpr
-      this.canvasCtx = this.canvasEl.getContext('2d')
-      this.canvasCtx.scale(this.canvasDpr, this.canvasDpr)
-    },
-    // #endif
-
-    // #ifndef H5
-    initCanvas() {
-      const query = uni.createSelectorQuery().in(this)
-      query.select('#game-canvas')
-        .fields({ node: true, size: true })
-        .exec((res) => {
-          if (!res[0] || !res[0].node) return
-          const canvas = res[0].node
-          const dpr = uni.getSystemInfoSync().pixelRatio
-          canvas.width = res[0].width * dpr
-          canvas.height = res[0].height * dpr
-          const ctx = canvas.getContext('2d')
-          ctx.scale(dpr, dpr)
-          this.canvasEl = canvas
-          this.canvasCtx = ctx
-          this.canvasW = res[0].width
-          this.canvasH = res[0].height
-          this.canvasDpr = dpr
-          // Defer first draw until user taps "start game"
-        })
-    },
-
-    resizeCanvas() {
-      if (!this.canvasEl) return
-      const query = uni.createSelectorQuery().in(this)
-      query.select('#game-canvas')
-        .fields({ node: true, size: true })
-        .exec((res) => {
-          if (!res[0] || !res[0].node) return
-          const canvas = res[0].node
-          const dpr = uni.getSystemInfoSync().pixelRatio
-          canvas.width = res[0].width * dpr
-          canvas.height = res[0].height * dpr
-          const ctx = canvas.getContext('2d')
-          ctx.scale(dpr, dpr)
-          this.canvasEl = canvas
-          this.canvasCtx = ctx
-          this.canvasW = res[0].width
-          this.canvasH = res[0].height
-          this.canvasDpr = dpr
-          this.draw()
-        })
-    },
-    // #endif
-
-    draw() {
-      if (!this.canvasCtx || !this.board) return
-      drawBoard(this.canvasCtx, this.boardState, this.canvasW, this.canvasH)
-    },
-
-    startLoop() {
-      if (this._rafId) return
-      const loop = () => {
-        this.draw()
-        // #ifdef H5
-        this._rafId = requestAnimationFrame(loop)
-        // #endif
-        // #ifndef H5
-        this._rafId = this.canvasEl.requestAnimationFrame(loop)
-        // #endif
-      }
-      // #ifdef H5
-      this._rafId = requestAnimationFrame(loop)
-      // #endif
-      // #ifndef H5
-      this._rafId = this.canvasEl.requestAnimationFrame(loop)
-      // #endif
-    },
-
-    stopLoop() {
-      if (this._rafId) {
-        // #ifdef H5
-        cancelAnimationFrame(this._rafId)
-        // #endif
-        // #ifndef H5
-        this.canvasEl.cancelAnimationFrame(this._rafId)
-        // #endif
-        this._rafId = null
-      }
-    },
-
-    handleCanvasTap(e) {
-      if (!this.board) return
-      // #ifdef H5
-      if (!this.canvasEl) return
-      // e.detail.x/y are relative to the <uni-canvas> wrapper,
-      // whose display dimensions match canvasW/canvasH — use directly
-      // with a scale factor to handle any offset between wrapper and
-      // the inner canvas drawing surface
-      const canvasRect = this.canvasEl.getBoundingClientRect()
-      const sx = e.detail.x * (this.canvasW / canvasRect.width)
-      const sy = e.detail.y * (this.canvasH / canvasRect.height)
-      this._hitTestCell(sx, sy)
-      // #endif
-
-      // #ifndef H5
-      // Mini program / native: e.detail.x/y are relative to the
-      // canvas component itself, matching the logical coordinate space
-      this._hitTestCell(e.detail.x, e.detail.y)
-      // #endif
-    },
-
-    _hitTestCell(sx, sy) {
-      const cell = getBoardPos(this.canvasW, this.canvasH, this.board, sx, sy)
-      if (cell) {
-        this.handleCellTap({ r: cell[0], c: cell[1] })
-      }
-    },
-
     // ── Initialization ──
 
     initGame() {
@@ -445,6 +248,7 @@ export default {
       }
 
       this.selected = null
+      this.jumpTargets = []
       this.moveCount = 0
       this.moveHistory = []
       this.history = []
@@ -458,7 +262,6 @@ export default {
       this.hintPath = null
       this.settlementVisible = false
       this.clearScoreDeductionAnimation()
-      // First draw triggered by startGame() or initCanvas()
     },
 
     // ── Timer management ──
@@ -505,13 +308,11 @@ export default {
     },
 
     checkMovePenalties() {
-      // Update warning visibility (slide in when entering warning zone)
       const nextThreshold = getNextThresholdTime(this.moveTimeElapsed)
       const inWarning = (nextThreshold - this.moveTimeElapsed <= 5000 && nextThreshold > this.moveTimeElapsed)
       this.moveTimerWarning = inWarning
       this.warningVisible = inWarning && !this.warningSuppressed
 
-      // Apply penalties
       const thresholdsCrossed = getPenaltyThresholdsCrossed(this.moveTimeElapsed)
       if (thresholdsCrossed > this.lastPenaltyThreshold) {
         const newPenalties = thresholdsCrossed - this.lastPenaltyThreshold
@@ -520,7 +321,6 @@ export default {
         this.lastPenaltyThreshold = thresholdsCrossed
         this.enqueueScoreDeduction(penalty)
 
-        // Slide out warning, then re-enable after 500ms
         this.warningSuppressed = true
         this.warningVisible = false
         setTimeout(() => {
@@ -574,8 +374,6 @@ export default {
     startGame() {
       if (this.timerStarted) return
       this.startTimers()
-      this.startLoop()
-      this.redraw()
     },
 
     // ── Game actions ──
@@ -585,10 +383,17 @@ export default {
 
       const cellValue = this.board[r][c]
 
-      // Tap player: toggle selection
+      // Tap player: toggle selection and show jump targets
       if (cellValue === PLAYER) {
-        this.selected = this.selected ? null : [r, c]
-        this.redraw()
+        if (this.selected) {
+          this.selected = null
+          this.jumpTargets = []
+        } else {
+          this.selected = [r, c]
+          this.jumpTargets = findAllJumpsFrom(
+            this.board, this.indexToAxial, this.axialToIndex, r, c
+          )
+        }
         return
       }
 
@@ -600,17 +405,14 @@ export default {
         )
 
         if (result) {
-          // Capture old position before mutation
           const oldPlayerPos = [...this.playerPos]
 
-          // Save state for undo
           this.history.push(saveStateSnapshot(
             this.board, this.boardColors, oldPlayerPos,
             this.moveCount, this.remainingPieces, this.moveHistory
           ))
           if (this.history.length > this.maxHistorySize) this.history.shift()
 
-          // Apply state
           this.board = result.newBoard
           this.boardColors = result.newBoardColors
           this.playerPos = result.newPlayerPos
@@ -618,15 +420,14 @@ export default {
           this.remainingPieces--
           this.moveHistory.push([oldPlayerPos, [r, c]])
 
-          // Rebuild axial mapping after obstacle removal
           const mapping = createAxialMapping(this.board)
           this.indexToAxial = mapping.indexToAxial
           this.axialToIndex = mapping.axialToIndex
 
           this.selected = null
+          this.jumpTargets = []
           this.hintPath = null
 
-          // Start timers on first move
           if (!this.timerStarted) {
             this.startTimers()
           }
@@ -634,7 +435,6 @@ export default {
           this.resetMoveTimer()
           playCaptureSound()
 
-          // Check win
           if (this.playerPos[0] <= 3) {
             this.gameWon = true
             this.stopTimers()
@@ -642,14 +442,13 @@ export default {
             this.triggerSettlement()
           }
 
-          this.redraw()
           return
         }
       }
 
       // Deselect on invalid tap
       this.selected = null
-      this.redraw()
+      this.jumpTargets = []
     },
 
     handleUndo() {
@@ -663,6 +462,7 @@ export default {
       this.remainingPieces = prevState.remainingPieces
       this.moveHistory = prevState.moveHistory
       this.selected = null
+      this.jumpTargets = []
       this.hintPath = null
       this.gameWon = false
       this.settlementVisible = false
@@ -674,7 +474,6 @@ export default {
       this.score = Math.max(SCORE_FLOOR, this.score - UNDO_SCORE_PENALTY)
       this.clearScoreDeductionAnimation()
       this.resetMoveTimer()
-      this.redraw()
     },
 
     handleRestart() {
@@ -690,6 +489,7 @@ export default {
         this.axialToIndex = mapping.axialToIndex
         this.remainingPieces = countObstacles(this.board)
         this.selected = null
+        this.jumpTargets = []
         this.moveCount = 0
         this.moveHistory = []
         this.history = []
@@ -702,7 +502,6 @@ export default {
         this.moveTimerWarning = false
         this.hintPath = null
         this.settlementVisible = false
-        this.redraw()
       }
     },
 
@@ -710,7 +509,6 @@ export default {
       if (!this.playerPos) return
       const path = solveGameBFS(this.board, this.playerPos, this.indexToAxial, this.axialToIndex)
       this.hintPath = path
-      this.redraw()
     },
 
     // ── Settlement ──
@@ -744,10 +542,8 @@ export default {
       // TODO: Generate new level
     },
 
-    // ── Helpers ──
-
-    redraw() {
-      this.draw()
+    configLevel(index) {
+      uni.navigateTo({ url: `/pages/config/config?index=${index}` })
     },
 
     goSettings() {
@@ -816,41 +612,37 @@ export default {
   justify-content: center;
   position: relative;
   z-index: 10;
-  margin-top: 73px;
+  margin-top: calc(150rpx + 73px);
   margin-bottom: 94px;
 }
 
-#canvas-wrapper {
+.board-container {
   width: 95%;
   height: 90%;
   margin: 40px 6px;
-}
-
-#game-canvas {
-  width: 100%;
-  height: 100%;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 // ── Cover layer ──
 
 .cover-layer {
   position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: fit-content;
-  height: fit-content;
-  padding: 18px;
-  background: rgba(255, 255, 255, 0.25);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.4);
-  border-radius: 24rpx;
+  inset: 0;
+  background: rgba(240, 240, 240, 0.97);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 30;
-  box-shadow: 0 8rpx 32rpx rgba(0, 0, 0, 0.08);
+  border-radius: 12rpx;
+  transition: opacity 250ms ease;
+}
+
+.cover-layer--hidden {
+  opacity: 0;
+  pointer-events: none;
 }
 
 .cover-layer__inner {
