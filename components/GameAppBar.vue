@@ -35,7 +35,9 @@ export default {
 
 .app-bar {
   @include fixed-top;
-  top: 150rpx;
+  margin-top: 150rpx;
+  margin-left: 4rpx;
+  margin-right: 4rpx;
   @include glass-surface(16px);
   @include glass-border;
   border-bottom: none;
@@ -44,7 +46,7 @@ export default {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0 calc(#{$sp-gutter} + 4rpx);
+  padding: 0 $sp-gutter;
   height: 73px;
 }
 
