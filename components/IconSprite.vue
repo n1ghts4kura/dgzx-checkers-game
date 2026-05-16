@@ -17,7 +17,9 @@ const ICON_MAP = {
   arrow_back: '/static/icons/arrow_back@3x.png',
   undo: '/static/icons/undo@3x.png',
   refresh: '/static/icons/refresh@3x.png',
-  hint: '/static/icons/hint@3x.png'
+  hint: '/static/icons/hint@3x.png',
+  share: '/static/icons/share@3x.png',
+  more_vert: '/static/icons/more_vert@3x.png'
 }
 
 export default {
@@ -43,7 +45,7 @@ export default {
 
 <style scoped>
 .icon-sprite {
-  display: inline-block;
+  display: block;
   flex-shrink: 0;
 }
 </style>

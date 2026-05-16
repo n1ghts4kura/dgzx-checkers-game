@@ -23,7 +23,7 @@ export default {
   props: {
     title: { type: String, default: '' },
     leftIcon: { type: String, default: 'menu_open' },
-    rightIcon: { type: String, default: 'settings' }
+    rightIcon: { type: String, default: '' }
   },
   emits: ['left-click', 'right-click']
 }
@@ -34,7 +34,7 @@ export default {
 @import '../common/glass-utilities';
 
 .app-bar {
-  margin-top: 150rpx;
+  margin-top: 68rpx;
   margin-left: 4rpx;
   margin-right: 4rpx;
   @include glass-surface(16px);
