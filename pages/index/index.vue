@@ -8,7 +8,7 @@
 
     <!-- TopAppBar -->
     <GameAppBar
-      title="棋盘-1"
+      :title="currentMapName"
       left-icon="menu_open"
       right-icon="settings"
       @left-click="sidebarVisible = true"
@@ -118,7 +118,7 @@ import BoardGrid from '@/components/BoardGrid.vue'
 import { createEmptyBoard, createEmptyColorLayer, createAxialMapping, countObstacles } from '@/game-core/board.js'
 import { executeMove, saveStateSnapshot, findAllJumpsFrom } from '@/game-core/logic.js'
 import { solveGameBFS } from '@/game-core/solver.js'
-import { setupDefaultBoard, buildLevelData, loadLevelIntoBoard, exportLevelToBase64, importLevelFromBase64 } from '@/game-core/generator.js'
+import { setupDefaultBoard, buildLevelData, loadLevelIntoBoard, importLevelFromBase64 } from '@/game-core/generator.js'
 import { getPenaltyThresholdsCrossed, getNextThresholdTime, calculateSettlementScore, formatScoreText } from '@/game-core/penalties.js'
 import { playCaptureSound, playVictorySound } from '@/game-core/audio.js'
 import {
@@ -210,6 +210,10 @@ export default {
       return new Set(this.jumpTargets.map(([r, c]) => `${r},${c}`))
     },
 
+    currentMapName() {
+      return this.levelNames[this.activeLevelIndex] || '棋盘'
+    },
+
     scoreDisplayText() {
       if (this.currentDeductionDisplay !== null) {
         return `-${this.currentDeductionDisplay}`
@@ -219,7 +223,12 @@ export default {
   },
 
   created() {
+    this.loadLevelsFromStorage()
     this.initGame()
+  },
+
+  onShow() {
+    this.refreshLevelsFromStorage()
   },
 
   beforeDestroy() {
@@ -234,25 +243,29 @@ export default {
 
       this.board = createEmptyBoard()
       this.boardColors = createEmptyColorLayer()
-      this.playerPos = setupDefaultBoard(this.board, this.boardColors)
-      const mapping = createAxialMapping(this.board)
-      this.indexToAxial = mapping.indexToAxial
-      this.axialToIndex = mapping.axialToIndex
-      this.remainingPieces = countObstacles(this.board)
 
-      const solutionPath = solveGameBFS(this.board, this.playerPos, this.indexToAxial, this.axialToIndex)
-      this.currentLevel = {
-        obstacles: [],
-        player: [...this.playerPos],
-        solutionPath: solutionPath || []
-      }
-      for (let r = 0; r < BOARD_ROWS; r++) {
-        for (let c = 0; c < BOARD_COLS; c++) {
-          if (this.board[r][c] === OBSTACLE) {
-            this.currentLevel.obstacles.push([r, c, this.boardColors[r][c]])
-          }
+      if (this.localMaps.length > 0) {
+        const map = this.localMaps[this.activeLevelIndex] || this.localMaps[0]
+        const levelData = importLevelFromBase64(map.map_str)
+        loadLevelIntoBoard(this.board, this.boardColors, levelData)
+        this.playerPos = [...levelData.player]
+        const mapping = createAxialMapping(this.board)
+        this.indexToAxial = mapping.indexToAxial
+        this.axialToIndex = mapping.axialToIndex
+        if (!levelData.solutionPath || levelData.solutionPath.length === 0) {
+          const solutionPath = solveGameBFS(this.board, this.playerPos, this.indexToAxial, this.axialToIndex)
+          levelData.solutionPath = solutionPath || []
         }
+        this.currentLevel = levelData
+      } else {
+        this.playerPos = setupDefaultBoard(this.board, this.boardColors)
+        const mapping = createAxialMapping(this.board)
+        this.indexToAxial = mapping.indexToAxial
+        this.axialToIndex = mapping.axialToIndex
+        this.currentLevel = buildLevelData(this.board, this.boardColors, this.playerPos, this.indexToAxial, this.axialToIndex)
       }
+
+      this.remainingPieces = countObstacles(this.board)
 
       this.selected = null
       this.jumpTargets = []
@@ -558,10 +571,83 @@ export default {
 
     // ── Level management ──
 
+    loadLevelsFromStorage() {
+      try {
+        const stored = uni.getStorageSync('local_maps')
+        if (stored && Array.isArray(stored) && stored.length > 0) {
+          this.localMaps = stored
+        } else {
+          this.initDefaultLocalMaps()
+        }
+      } catch (e) {
+        this.initDefaultLocalMaps()
+      }
+      this.levelNames = this.localMaps.map(m => m.map_name)
+    },
+
+    refreshLevelsFromStorage() {
+      try {
+        const stored = uni.getStorageSync('local_maps')
+        if (stored && Array.isArray(stored)) {
+          this.localMaps = stored
+          this.levelNames = this.localMaps.map(m => m.map_name)
+        }
+      } catch (e) { /* ignore */ }
+    },
+
+    initDefaultLocalMaps() {
+      const DEFAULT_MAP_STR = 'eyJvYnN0YWNsZXMiOltbNyw2LCIjRkZENzAwIl0sWzgsNCwiI0RDMTQzQyJdLFsxMCw0LCIjRkZENzAwIl0sWzExLDYsIiNBMDIwRjAiXSxbMTQsOCwiIzMyODJGRiJdXSwicGxheWVyIjpbMTMsN10sInNvbHV0aW9uUGF0aCI6W1sxMyw3XSxbMTUsOF0sWzcsNF0sWzksM10sWzExLDRdLFszLDhdXX0='
+
+      this.localMaps = [
+        { map_name: '决赛地图', map_str: DEFAULT_MAP_STR }
+      ]
+      uni.setStorageSync('local_maps', this.localMaps)
+    },
+
     selectLevel(index) {
+      if (index === this.activeLevelIndex) {
+        this.sidebarVisible = false
+        return
+      }
       this.activeLevelIndex = index
       this.sidebarVisible = false
-      // TODO: Load level from storage
+
+      this.stopTimers()
+      this.clearScoreDeductionAnimation()
+
+      const map = this.localMaps[index]
+      if (!map) return
+
+      this.board = createEmptyBoard()
+      this.boardColors = createEmptyColorLayer()
+      const levelData = importLevelFromBase64(map.map_str)
+      loadLevelIntoBoard(this.board, this.boardColors, levelData)
+      this.playerPos = [...levelData.player]
+      const mapping = createAxialMapping(this.board)
+      this.indexToAxial = mapping.indexToAxial
+      this.axialToIndex = mapping.axialToIndex
+      if (!levelData.solutionPath || levelData.solutionPath.length === 0) {
+        const solutionPath = solveGameBFS(this.board, this.playerPos, this.indexToAxial, this.axialToIndex)
+        levelData.solutionPath = solutionPath || []
+      }
+      this.currentLevel = levelData
+      this.remainingPieces = countObstacles(this.board)
+
+      this.selected = null
+      this.jumpTargets = []
+      this.moveCount = 0
+      this.moveHistory = []
+      this.history = []
+      this.score = INITIAL_SCORE
+      this.gameTimeLeft = GAME_TIME
+      this.moveTimeElapsed = 0
+      this.lastPenaltyThreshold = 0
+      this.gameWon = false
+      this.timerStarted = false
+      this.moveTimerWarning = false
+      this.hintPath = null
+      this.settlementVisible = false
+      this.refreshJumpTargets()
     },
 
     createNewLevel() {
@@ -571,6 +657,11 @@ export default {
 
     configLevel(index) {
       uni.navigateTo({ url: `/pages/config/config?index=${index}` })
+    },
+
+    handleImport() {
+      this.sidebarVisible = false
+      uni.navigateTo({ url: '/pages/load/load' })
     },
 
     goSettings() {

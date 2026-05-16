@@ -20,6 +20,13 @@
 				"navigationStyle": "custom",
 				"disableScroll": false
 			}
+		},
+		{
+			"path": "pages/load/load",
+			"style": {
+				"navigationStyle": "custom",
+				"disableScroll": false
+			}
 		}
 	],
 	"globalStyle": {

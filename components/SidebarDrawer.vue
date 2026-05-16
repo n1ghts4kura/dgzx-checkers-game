@@ -11,6 +11,12 @@
       :class="{ 'sidebar-drawer--open': visible }"
     >
       <view class="sidebar-content">
+        <!-- Import map -->
+        <view class="btn-import" @tap="$emit('import-level')">
+          <IconSprite name="hint" :size="24" />
+          <text class="btn-import__text">导入地图</text>
+        </view>
+
         <!-- Create new board -->
         <view class="btn-create" @tap="$emit('create-level')">
           <IconSprite name="add_circle" :size="24" />
@@ -49,7 +55,7 @@ export default {
     levelNames: { type: Array, default: () => ['棋盘-1', '棋盘-2'] },
     activeLevelIndex: { type: Number, default: 0 }
   },
-  emits: ['close', 'select-level', 'create-level', 'config-level']
+  emits: ['close', 'select-level', 'create-level', 'config-level', 'import-level']
 }
 </script>
 
@@ -102,7 +108,7 @@ export default {
   height: 100%;
 }
 
-.btn-create {
+.btn-import {
   margin-top: 64rpx;
   height: 144rpx;
   width: 100%;
@@ -112,10 +118,37 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 16rpx;
+  gap: 24rpx;
   font-family: $font-headline;
-  font-size: $fs-headline-lg-mobile;
-  line-height: $lh-headline-lg-mobile;
+  font-size: 20px;
+  font-weight: 700;
+  box-shadow: 0 8rpx 24rpx rgba(16, 185, 129, 0.2);
+  transition: transform 0.15s;
+
+  &:active {
+    transform: scale(0.95);
+  }
+}
+
+.btn-import__text {
+  font-family: $font-headline;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.btn-create {
+  margin-top: 32rpx;
+  height: 144rpx;
+  width: 100%;
+  background: $color-primary;
+  color: $color-on-primary;
+  border-radius: $radius-default;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 24rpx;
+  font-family: $font-headline;
+  font-size: 20px;
   font-weight: 700;
   box-shadow: 0 8rpx 24rpx rgba(16, 185, 129, 0.2);
   transition: transform 0.15s;
@@ -127,7 +160,7 @@ export default {
 
 .btn-create__text {
   font-family: $font-headline;
-  font-size: $fs-headline-lg-mobile;
+  font-size: 20px;
   font-weight: 700;
 }
 
