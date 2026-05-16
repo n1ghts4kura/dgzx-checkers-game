@@ -22,7 +22,21 @@
 			}
 		},
 		{
+			"path": "pages/create/create",
+			"style": {
+				"navigationStyle": "custom",
+				"disableScroll": false
+			}
+		},
+		{
 			"path": "pages/load/load",
+			"style": {
+				"navigationStyle": "custom",
+				"disableScroll": false
+			}
+		},
+		{
+			"path": "pages/info/info",
 			"style": {
 				"navigationStyle": "custom",
 				"disableScroll": false
