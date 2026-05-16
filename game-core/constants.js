@@ -40,10 +40,12 @@ export const SCORE_DEDUCTION_ANIMATION_MS = 1500;
 export const WIN_ROW_THRESHOLD = 3;
 
 // Generator limits
-export const GENERATION_TIMEOUT_BASE = 15000;
-export const GENERATION_TIMEOUT_LONG = 45000;
-export const MAX_BFS_ITERATIONS = 30000;
+export const GENERATION_TIMEOUT_BASE = 18000;
+export const GENERATION_TIMEOUT_LONG = 54000;
+export const GENERATION_YIELD_INTERVAL = 120;
+export const MAX_BFS_ITERATIONS = 100000;
 export const SOLVER_STEP_LIMIT = 100;
+export const MAX_LOCAL_MAPS = 100;
 
 // Rendering
 export const CELL_SIZE = 33;
