@@ -78,7 +78,7 @@ export default {
   display: flex;
   padding: 12rpx $sp-gutter;
   padding-bottom: calc(12rpx + env(safe-area-inset-bottom));
-  gap: 12rpx;
+  gap: 12px;
   height: 94px;
   min-height: 94px;
   flex-shrink: 0;
@@ -87,7 +87,7 @@ export default {
 .dock-stats {
   width: 75%;
   display: flex;
-  gap: 12rpx;
+  gap: 12px;
   height: 100%;
 }
 
@@ -130,14 +130,14 @@ export default {
   width: 25%;
   display: flex;
   flex-direction: column;
-  gap: 12rpx;
+  gap: 12px;
   height: 100%;
 }
 
 .dock-actions__row {
   flex: 1;
   display: flex;
-  gap: 12rpx;
+  gap: 12px;
 }
 
 .action-btn {

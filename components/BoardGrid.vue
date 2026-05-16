@@ -41,7 +41,8 @@ export default {
     selected: { type: Array, default: null },
     jumpTargets: { type: Array, default: () => [] },
     hintPath: { type: Array, default: null },
-    disabled: { type: Boolean, default: false }
+    disabled: { type: Boolean, default: false },
+    boardVisible: { type: Boolean, default: true }
   },
   emits: ['cell-tap'],
   data() {
@@ -73,7 +74,9 @@ export default {
       return {
         position: 'relative',
         width: (b.maxX - b.minX + S) + 'px',
-        height: (b.maxY - b.minY + S) + 'px'
+        height: (b.maxY - b.minY + S) + 'px',
+        opacity: this.boardVisible ? 1 : 0,
+        transition: 'opacity 250ms ease'
       }
     },
 

@@ -24,6 +24,7 @@
       @select-level="selectLevel"
       @create-level="createNewLevel"
       @config-level="configLevel"
+      @import-level="handleImport"
     />
 
     <!-- Board area -->
@@ -37,6 +38,7 @@
           :jump-targets="jumpTargets"
           :hint-path="hintPath"
           :disabled="gameWon"
+          :board-visible="timerStarted"
           @cell-tap="handleCellTap"
         />
 
@@ -116,7 +118,7 @@ import BoardGrid from '@/components/BoardGrid.vue'
 import { createEmptyBoard, createEmptyColorLayer, createAxialMapping, countObstacles } from '@/game-core/board.js'
 import { executeMove, saveStateSnapshot, findAllJumpsFrom } from '@/game-core/logic.js'
 import { solveGameBFS } from '@/game-core/solver.js'
-import { setupDefaultBoard, buildLevelData, loadLevelIntoBoard } from '@/game-core/generator.js'
+import { setupDefaultBoard, buildLevelData, loadLevelIntoBoard, exportLevelToBase64, importLevelFromBase64 } from '@/game-core/generator.js'
 import { getPenaltyThresholdsCrossed, getNextThresholdTime, calculateSettlementScore, formatScoreText } from '@/game-core/penalties.js'
 import { playCaptureSound, playVictorySound } from '@/game-core/audio.js'
 import {
@@ -174,7 +176,8 @@ export default {
       settlement: { factor1: '0', factor2: '0', finalScore: 0, won: false },
 
       // Level management
-      levelNames: ['棋盘-1', '棋盘-2'],
+      localMaps: [],
+      levelNames: [],
       activeLevelIndex: 0,
       maxHistorySize: 50
     }
@@ -579,6 +582,7 @@ export default {
 
 <style lang="scss" scoped>
 @import '../../common/design-tokens';
+@import '../../common/glass-utilities';
 
 .page-game {
   width: 100%;
@@ -653,13 +657,17 @@ export default {
 
 .cover-layer {
   position: absolute;
-  inset: 0;
-  background: rgba(240, 240, 240, 0.97);
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  @include glass-surface(24px);
+  @include glass-border;
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 30;
-  border-radius: 12rpx;
+  border-radius: 24rpx;
+  padding: 48rpx 64rpx;
   transition: opacity 250ms ease;
 }
 
