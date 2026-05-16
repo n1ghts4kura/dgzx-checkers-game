@@ -4,10 +4,13 @@
     <view class="dock-stats">
       <view class="stat-card">
         <text class="stat-label">当前得分</text>
-        <text class="stat-value stat-value--primary">{{ score }}</text>
+        <text
+          class="stat-value"
+          :class="scoreDeducting ? 'stat-value--deduct' : 'stat-value--primary'"
+        >{{ score }}</text>
       </view>
       <view class="stat-card">
-        <text class="stat-label">落子剩余时间</text>
+        <text class="stat-label">落子耗时</text>
         <text
           class="stat-value stat-value--tertiary"
           :style="{
@@ -28,13 +31,19 @@
 
     <!-- Actions (right 25%) -->
     <view class="dock-actions">
-      <view class="action-btn" :class="{ 'action-btn--disabled': !canUndo }" @tap="$emit('undo')">
-        <IconSprite name="undo" :size="24" />
+      <view class="action-btn action-btn--wide" :class="{ 'action-btn--disabled': !canUndo }" @tap="$emit('undo')">
+        <IconSprite name="undo" :size="20" />
         <text class="action-label">悔棋</text>
       </view>
-      <view class="action-btn" @tap="$emit('restart')">
-        <IconSprite name="refresh" :size="24" />
-        <text class="action-label">重新开始</text>
+      <view class="dock-actions__row">
+        <view class="action-btn" @tap="$emit('hint')">
+          <IconSprite name="hint" :size="20" />
+          <text class="action-label">提示</text>
+        </view>
+        <view class="action-btn" @tap="$emit('restart')">
+          <IconSprite name="refresh" :size="20" />
+          <text class="action-label">重开</text>
+        </view>
       </view>
     </view>
   </footer>
@@ -47,7 +56,8 @@ export default {
   name: 'BottomDock',
   components: { IconSprite },
   props: {
-    score: { type: Number, default: 150 },
+    score: { type: [Number, String], default: '150分' },
+    scoreDeducting: { type: Boolean, default: false },
     gameTimeFormatted: { type: String, default: '10:00' },
     moveTimeFormatted: { type: String, default: '0.00' },
     moveTimerWarning: { type: Boolean, default: false },
@@ -55,7 +65,7 @@ export default {
     moveTimerBounce: { type: Boolean, default: false },
     canUndo: { type: Boolean, default: false }
   },
-  emits: ['undo', 'restart']
+  emits: ['undo', 'hint', 'restart']
 }
 </script>
 
@@ -116,6 +126,10 @@ export default {
 
   &--primary { color: $color-primary; }
   &--tertiary { color: $color-tertiary; }
+  &--deduct {
+    color: $color-error;
+    animation: score-deduction-fade 1.5s ease-in-out;
+  }
 }
 
 .dock-actions {
@@ -124,6 +138,12 @@ export default {
   flex-direction: column;
   gap: 12rpx;
   height: 100%;
+}
+
+.dock-actions__row {
+  flex: 1;
+  display: flex;
+  gap: 12rpx;
 }
 
 .action-btn {
@@ -136,6 +156,10 @@ export default {
   justify-content: center;
   color: $color-on-surface-variant;
   transition: transform 0.15s;
+
+  &--wide {
+    flex: 1;
+  }
 
   &:active {
     transform: scale(0.9);
@@ -154,5 +178,12 @@ export default {
   font-weight: 700;
   letter-spacing: $ls-label-bold;
   margin-top: 4rpx;
+}
+
+@keyframes score-deduction-fade {
+  0%   { opacity: 0; transform: translateY(6px); }
+  18%  { opacity: 1; transform: translateY(0); }
+  78%  { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(-6px); }
 }
 </style>
