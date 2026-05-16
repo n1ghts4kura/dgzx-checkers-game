@@ -3,7 +3,8 @@
 		onLaunch: function() {
 			console.log('App Launch')
 
-			// 加载 Liquid Glass 设计字体
+			// 加载字体 — H5 从本地文件 (common/fonts.css @font-face)
+			// 小程序从 Google Fonts CDN (wx.loadFontFace 需要网络 URL)
 			// #ifdef MP-WEIXIN
 			wx.loadFontFace({
 				family: 'Manrope',
@@ -14,6 +15,11 @@
 				family: 'Hanken Grotesk',
 				source: 'url("https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;700&display=swap")',
 				success: function() { console.log('Hanken Grotesk loaded') }
+			})
+			wx.loadFontFace({
+				family: 'Material Symbols Outlined',
+				source: 'url("https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL@20..48,100..700,0..1&display=swap")',
+				success: function() { console.log('Material Symbols loaded') }
 			})
 			// #endif
 		},
@@ -27,6 +33,16 @@
 </script>
 
 <style>
+		/* 本地字体 — 仅 H5（MP 由 wx.loadFontFace 加载） */
+		/* #ifdef H5 */
+		@import './common/fonts.css';
+		/* #endif */
+
+		/* Material Symbols — H5 CDN / MP wx.loadFontFace (2.3MB 不打包) */
+		/* #ifdef H5 */
+		@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL@20..48,100..700,0..1&display=swap');
+		/* #endif */
+
 	/* 全局页面样式 */
 	page {
 		background-color: #f7f9fb;
