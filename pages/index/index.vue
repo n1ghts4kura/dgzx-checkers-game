@@ -28,11 +28,21 @@
     <!-- Board area -->
     <main class="board-area">
       <view id="canvas-wrapper">
+        <!-- #ifdef MP -->
+        <canvas
+          type="2d"
+          id="game-canvas"
+          @tap="handleCanvasTap"
+          :style="{ opacity: timerStarted ? 1 : 0, transition: 'opacity 250ms ease' }"
+        />
+        <!-- #endif -->
+        <!-- #ifndef MP -->
         <canvas
           id="game-canvas"
           @tap="handleCanvasTap"
           :style="{ opacity: timerStarted ? 1 : 0, transition: 'opacity 250ms ease' }"
         />
+        <!-- #endif -->
 
         <!-- Cover layer (before game starts) -->
         <view
@@ -65,7 +75,6 @@
       :move-time-formatted="moveTimeFormatted"
       :move-timer-warning="moveTimerWarning"
       :move-timer-red-intensity="moveTimerRedIntensity"
-      :move-timer-bounce="moveTimerBounce"
       :can-undo="history.length > 0"
       :score-deducting="scoreDeductionAnimating"
       @undo="handleUndo"
@@ -234,11 +243,16 @@ export default {
       this.initCanvas()
     })
     // #endif
+    // #ifndef H5
+    this.$nextTick(() => {
+      this.initCanvas()
+    })
+    // #endif
   },
 
   beforeDestroy() {
-    // #ifdef H5
     this.stopLoop()
+    // #ifdef H5
     if (this._resizeObserver) {
       this._resizeObserver.disconnect()
       this._resizeObserver = null
@@ -248,7 +262,7 @@ export default {
   },
 
   methods: {
-    // ── Canvas ──
+    // ── Canvas (platform-specific init, cross-platform draw/loop) ──
 
     // #ifdef H5
     initCanvas() {
@@ -292,6 +306,52 @@ export default {
       this.canvasCtx = this.canvasEl.getContext('2d')
       this.canvasCtx.scale(this.canvasDpr, this.canvasDpr)
     },
+    // #endif
+
+    // #ifndef H5
+    initCanvas() {
+      const query = uni.createSelectorQuery().in(this)
+      query.select('#game-canvas')
+        .fields({ node: true, size: true })
+        .exec((res) => {
+          if (!res[0] || !res[0].node) return
+          const canvas = res[0].node
+          const dpr = uni.getSystemInfoSync().pixelRatio
+          canvas.width = res[0].width * dpr
+          canvas.height = res[0].height * dpr
+          const ctx = canvas.getContext('2d')
+          ctx.scale(dpr, dpr)
+          this.canvasEl = canvas
+          this.canvasCtx = ctx
+          this.canvasW = res[0].width
+          this.canvasH = res[0].height
+          this.canvasDpr = dpr
+          // Defer first draw until user taps "start game"
+        })
+    },
+
+    resizeCanvas() {
+      if (!this.canvasEl) return
+      const query = uni.createSelectorQuery().in(this)
+      query.select('#game-canvas')
+        .fields({ node: true, size: true })
+        .exec((res) => {
+          if (!res[0] || !res[0].node) return
+          const canvas = res[0].node
+          const dpr = uni.getSystemInfoSync().pixelRatio
+          canvas.width = res[0].width * dpr
+          canvas.height = res[0].height * dpr
+          const ctx = canvas.getContext('2d')
+          ctx.scale(dpr, dpr)
+          this.canvasEl = canvas
+          this.canvasCtx = ctx
+          this.canvasW = res[0].width
+          this.canvasH = res[0].height
+          this.canvasDpr = dpr
+          this.draw()
+        })
+    },
+    // #endif
 
     draw() {
       if (!this.canvasCtx || !this.board) return
@@ -302,33 +362,60 @@ export default {
       if (this._rafId) return
       const loop = () => {
         this.draw()
+        // #ifdef H5
         this._rafId = requestAnimationFrame(loop)
+        // #endif
+        // #ifndef H5
+        this._rafId = this.canvasEl.requestAnimationFrame(loop)
+        // #endif
       }
+      // #ifdef H5
       this._rafId = requestAnimationFrame(loop)
+      // #endif
+      // #ifndef H5
+      this._rafId = this.canvasEl.requestAnimationFrame(loop)
+      // #endif
     },
 
     stopLoop() {
       if (this._rafId) {
+        // #ifdef H5
         cancelAnimationFrame(this._rafId)
+        // #endif
+        // #ifndef H5
+        this.canvasEl.cancelAnimationFrame(this._rafId)
+        // #endif
         this._rafId = null
       }
     },
 
     handleCanvasTap(e) {
-      if (!this.canvasEl || !this.board) return
-      // Get tap position relative to canvas display
-      const rect = this.canvasEl.getBoundingClientRect()
-      const px = e.detail.x - rect.left
-      const py = e.detail.y - rect.top
-      // Scale from display size to bitmap logical size
-      const sx = px * (this.canvasW / rect.width)
-      const sy = py * (this.canvasH / rect.height)
+      if (!this.board) return
+      // #ifdef H5
+      if (!this.canvasEl) return
+      // e.detail.x/y are relative to the <uni-canvas> wrapper,
+      // whose display dimensions match canvasW/canvasH — use directly
+      // with a scale factor to handle any offset between wrapper and
+      // the inner canvas drawing surface
+      const canvasRect = this.canvasEl.getBoundingClientRect()
+      const sx = e.detail.x * (this.canvasW / canvasRect.width)
+      const sy = e.detail.y * (this.canvasH / canvasRect.height)
+      this._hitTestCell(sx, sy)
+      // #endif
+
+      // #ifndef H5
+      // Mini program / native: e.detail.x/y are relative to the
+      // canvas component itself, matching the logical coordinate space
+      this._hitTestCell(e.detail.x, e.detail.y)
+      // #endif
+    },
+
+    _hitTestCell(sx, sy) {
       const cell = getBoardPos(this.canvasW, this.canvasH, this.board, sx, sy)
       if (cell) {
         this.handleCellTap({ r: cell[0], c: cell[1] })
       }
     },
-    // #endif
 
     // ── Initialization ──
 
@@ -371,8 +458,7 @@ export default {
       this.hintPath = null
       this.settlementVisible = false
       this.clearScoreDeductionAnimation()
-
-      this.redraw()
+      // First draw triggered by startGame() or initCanvas()
     },
 
     // ── Timer management ──
@@ -488,6 +574,7 @@ export default {
     startGame() {
       if (this.timerStarted) return
       this.startTimers()
+      this.startLoop()
       this.redraw()
     },
 
