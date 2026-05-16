@@ -10,7 +10,7 @@ V1 reference prototype: `origin_game/障碍跳棋_新.html`. Design doc: **[stru
 
 ## Build & Development
 
-No `package.json` — dependencies and builds are managed by HBuilderX IDE.
+No `package.json` — dependencies and builds are managed by HBuilderX IDE. The `npm run` commands below require a global `@dcloudio/uni-cli` install or HBuilderX's built-in CLI:
 
 ```bash
 npm run dev:h5           # H5 dev server
@@ -98,13 +98,16 @@ Level data: `{ obstacles: [[r,c,color],...], player: [r,c], solutionPath: [[r,c]
 - **`BoardGrid.vue`** — CSS-positioned board with cell rendering, jump targets, hint path, connectors. Computes responsive `cellSize` from container. Emits `cell-tap`.
 - **`BottomDock.vue`** — Score display (with deduction animation), move timer (red gradient 15-30s), game timer, undo/hint/restart buttons. Props-only, emits actions.
 - **`GameAppBar.vue`** — Glass-morphism header with left/right icon slots
-- **`SidebarDrawer.vue`** — Slide-in drawer with level list (active state, per-level config button), "create new" button, backdrop
-- **`IconSprite.vue`** — Local PNG icons from `static/icons/` (name→path map, supports @3x)
+- **`SidebarDrawer.vue`** — Slide-in drawer with level list, three-dot popup menu per level (share/delete), "create new" button, import button, backdrop. Popup uses CSS `@keyframes` animation.
+- **`IconSprite.vue`** — Local PNG icons from `static/icons/` (name→path map, supports @3x). Icons: arrow_back, undo, refresh, hint, share, more_vert, grid_on, apps, menu_open, settings, add_circle.
 - **`LiquidCard.vue`** — Glass-morphism card wrapper with slot
+- **`CircleProgressDialog.vue`** — Full-screen loading/success/failure overlay with animated circle, status text, and action buttons. Auto-dismisses on result: holds ~1.7s (success) or ~2.2s (failure), then fades 250ms, then emits `done`. Uses `position: fixed` overlay with CSS opacity + scale transition.
 
 ### Pages
-- **`pages/index/index.vue`** — Main game page. Owns all game state: board, timers, score, history, settlement. Orchestrates game loop: cover → play → victory → settlement. Handles cell tap routing (jump target → execute, player → toggle selection, other → deselect).
-- **`pages/config/config.vue`** — Level config: step count input, fixed-start toggle, high-quality toggle. Emits config via `uni.$emit('board-config:generate', config)` then navigates back.
+- **`pages/index/index.vue`** — Main game page. Owns all game state: board, timers, score, history, settlement. Orchestrates game loop: cover → play → victory → settlement. Handles cell tap routing. Also hosts share/delete dialogs (opacity transition via CSS `transition: opacity 180ms`), checks `pending_switch_to_last` on `onShow` to auto-switch to newly imported/generated maps.
+- **`pages/create/create.vue`** — Board creation: config card (step count, fixed-start toggle, high-quality toggle), mini hex board preview, generate + import buttons. Calls `growPathElegant()` directly via `setTimeout`, saves to storage with `pending_switch_to_last` flag, shows `CircleProgressDialog` during generation.
+- **`pages/load/load.vue`** — Import levels via Base64 code string with preview + name + confirm. Sets `pending_switch_to_last` after import so index page auto-switches.
+- **`pages/config/config.vue`** — **Dead code.** Replaced by `pages/create/create.vue`. No listener in index page, no route from sidebar.
 - **`pages/settings/settings.vue`** — Author info only
 
 ## Design System (`common/`)
@@ -145,4 +148,8 @@ Key platform differences:
 - **Axial mapping rebuild**: After each move, `createAxialMapping()` is called fresh. The Maps use string keys (`"q,r"` and `"r,c"`).
 - **Jump target set**: Computed as a `Set` of `"r,c"` strings for O(1) lookup in `renderedCells`.
 - **Board sizing**: `cellSize` is stored in component `data` and updated by `computeCellSize()`. The `boardStyle` computed property derives total width/height from cell bounds.
-- **Level management is incomplete**: 2 hardcoded level names, no persistence, config page `uni.$emit` has no listener in index page. Level generation from config is the next major feature to wire up.
+- **Level persistence**: Levels stored in `uni.getStorageSync('local_maps')` as `[{ map_name, map_str }, ...]`. Index page owns `localMaps`, `levelNames`, and `activeLevelIndex`. Two bootstrap defaults exist if storage is empty.
+- **Auto-switch on import/generate**: Load and Create pages set `uni.setStorageSync('pending_switch_to_last', true)`. Index page checks this flag in `onShow()` → `checkPendingSwitch()`, removes it, and switches to the last map in the list.
+- **Dialogs use CSS opacity transition** (not Vue `<transition>`): `.dialog-overlay` has `opacity: 0; pointer-events: none; transition: opacity 180ms ease;` with `&--visible` setting `opacity: 1; pointer-events: auto`. Same pattern used for both share and delete dialogs in `pages/index/index.vue`.
+- **Page transitions**: `App.vue` defines a global `@keyframes pageTransition` (400ms, 50% hold then fade-in) applied to the `page` element. All pages get this fade-in on navigation.
+- **Overlay positioning**: Index page overlays use `position: absolute` (page has `position: relative`). Cross-page overlays like `CircleProgressDialog` use `position: fixed`.
