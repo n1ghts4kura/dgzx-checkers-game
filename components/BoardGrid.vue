@@ -18,6 +18,13 @@
         class="hint-connector"
         :style="conn.style"
       />
+
+      <view
+        v-for="(conn, i) in jumpPreviewConnectors"
+        :key="'jpc-' + i"
+        class="jump-preview-connector"
+        :style="conn.style"
+      />
     </view>
   </view>
 </template>
@@ -134,6 +141,38 @@ export default {
           style: {
             left: x1 + 'px',
             top: (y1 - 1.5) + 'px',
+            width: length + 'px',
+            transform: `rotate(${angle}deg)`,
+            transformOrigin: 'left center'
+          }
+        })
+      }
+      return result
+    },
+
+    jumpPreviewConnectors() {
+      if (!this.selected || !this.playerPos || this.jumpTargets.length === 0) return []
+      const S = this.cellSize
+      const b = this.cellBounds
+      const pad = S / 2
+      const [pr, pc] = this.playerPos
+      const x1 = pc * S + (pr % 2) * S / 2 - b.minX + pad
+      const y1 = pr * S * 0.86 - b.minY + pad
+
+      const result = []
+      for (const [tr, tc] of this.jumpTargets) {
+        const x2 = tc * S + (tr % 2) * S / 2 - b.minX + pad
+        const y2 = tr * S * 0.86 - b.minY + pad
+
+        const dx = x2 - x1
+        const dy = y2 - y1
+        const length = Math.sqrt(dx * dx + dy * dy)
+        const angle = Math.atan2(dy, dx) * 180 / Math.PI
+
+        result.push({
+          style: {
+            left: x1 + 'px',
+            top: y1 + 'px',
             width: length + 'px',
             transform: `rotate(${angle}deg)`,
             transformOrigin: 'left center'
@@ -287,9 +326,16 @@ export default {
 // ── Selected ──
 .board-cell--selected {
   z-index: 4;
+  animation: selected-pulse 1.2s ease-in-out infinite;
+
   &::before {
-    box-shadow: 0 0 0 3px #FFB350;
+    box-shadow: 0 0 0 4px #FFB350, 0 0 12px rgba(255, 179, 80, 0.5);
   }
+}
+
+@keyframes selected-pulse {
+  0%, 100% { transform: translate(-50%, -50%) scale(1); }
+  50% { transform: translate(-50%, -50%) scale(1.06); }
 }
 
 // ── Jump target ──
@@ -346,5 +392,16 @@ export default {
   pointer-events: none;
   z-index: 4;
   border-radius: 2px;
+}
+
+// ── Jump preview connectors ──
+.jump-preview-connector {
+  position: absolute;
+  height: 2px;
+  background: #00A844;
+  opacity: 0.35;
+  pointer-events: none;
+  z-index: 3;
+  border-radius: 1px;
 }
 </style>

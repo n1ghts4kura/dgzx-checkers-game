@@ -203,6 +203,10 @@ export default {
     formattedScore() {
       return formatScoreText(this.score)
     },
+    jumpTargetSet() {
+      return new Set(this.jumpTargets.map(([r, c]) => `${r},${c}`))
+    },
+
     scoreDisplayText() {
       if (this.currentDeductionDisplay !== null) {
         return `-${this.currentDeductionDisplay}`
@@ -262,6 +266,18 @@ export default {
       this.hintPath = null
       this.settlementVisible = false
       this.clearScoreDeductionAnimation()
+    },
+
+    refreshJumpTargets() {
+      if (!this.playerPos || this.gameWon) {
+        this.jumpTargets = []
+        return
+      }
+      const targets = findAllJumpsFrom(
+        this.board, this.indexToAxial, this.axialToIndex,
+        this.playerPos[0], this.playerPos[1]
+      )
+      this.jumpTargets = targets
     },
 
     // ── Timer management ──
@@ -374,6 +390,7 @@ export default {
     startGame() {
       if (this.timerStarted) return
       this.startTimers()
+      this.refreshJumpTargets()
     },
 
     // ── Game actions ──
@@ -383,72 +400,77 @@ export default {
 
       const cellValue = this.board[r][c]
 
-      // Tap player: toggle selection and show jump targets
+      // Direct jump: tapping a jump target jumps immediately (like original game)
+      if (cellValue === EMPTY && this.playerPos && this.jumpTargetSet.has(`${r},${c}`)) {
+        this.executeJumpTo(r, c)
+        return
+      }
+
+      // Tap player: toggle selection
       if (cellValue === PLAYER) {
-        if (this.selected) {
+        if (this.selected && this.selected[0] === r && this.selected[1] === c) {
           this.selected = null
-          this.jumpTargets = []
         } else {
           this.selected = [r, c]
-          this.jumpTargets = findAllJumpsFrom(
-            this.board, this.indexToAxial, this.axialToIndex, r, c
-          )
+          this.refreshJumpTargets()
         }
         return
       }
 
-      // Tap empty cell: try to jump
-      if (cellValue === EMPTY && this.playerPos && this.selected) {
-        const result = executeMove(
-          this.board, this.boardColors, this.playerPos, r, c,
-          this.indexToAxial, this.axialToIndex
-        )
+      // Tap anything else: deselect
+      this.selected = null
+    },
 
-        if (result) {
-          const oldPlayerPos = [...this.playerPos]
-
-          this.history.push(saveStateSnapshot(
-            this.board, this.boardColors, oldPlayerPos,
-            this.moveCount, this.remainingPieces, this.moveHistory
-          ))
-          if (this.history.length > this.maxHistorySize) this.history.shift()
-
-          this.board = result.newBoard
-          this.boardColors = result.newBoardColors
-          this.playerPos = result.newPlayerPos
-          this.moveCount++
-          this.remainingPieces--
-          this.moveHistory.push([oldPlayerPos, [r, c]])
-
-          const mapping = createAxialMapping(this.board)
-          this.indexToAxial = mapping.indexToAxial
-          this.axialToIndex = mapping.axialToIndex
-
-          this.selected = null
-          this.jumpTargets = []
-          this.hintPath = null
-
-          if (!this.timerStarted) {
-            this.startTimers()
-          }
-
-          this.resetMoveTimer()
-          playCaptureSound()
-
-          if (this.playerPos[0] <= 3) {
-            this.gameWon = true
-            this.stopTimers()
-            playVictorySound()
-            this.triggerSettlement()
-          }
-
-          return
-        }
+    executeJumpTo(r, c) {
+      if (!this.playerPos || !this.selected) {
+        // Allow jump even without prior selection (direct tap on target)
+        this.selected = [...this.playerPos]
       }
 
-      // Deselect on invalid tap
+      const result = executeMove(
+        this.board, this.boardColors, this.playerPos, r, c,
+        this.indexToAxial, this.axialToIndex
+      )
+
+      if (!result) return
+
+      const oldPlayerPos = [...this.playerPos]
+
+      this.history.push(saveStateSnapshot(
+        this.board, this.boardColors, oldPlayerPos,
+        this.moveCount, this.remainingPieces, this.moveHistory
+      ))
+      if (this.history.length > this.maxHistorySize) this.history.shift()
+
+      this.board = result.newBoard
+      this.boardColors = result.newBoardColors
+      this.playerPos = result.newPlayerPos
+      this.moveCount++
+      this.remainingPieces--
+      this.moveHistory.push([oldPlayerPos, [r, c]])
+
+      const mapping = createAxialMapping(this.board)
+      this.indexToAxial = mapping.indexToAxial
+      this.axialToIndex = mapping.axialToIndex
+
       this.selected = null
-      this.jumpTargets = []
+      this.hintPath = null
+
+      if (!this.timerStarted) {
+        this.startTimers()
+      }
+
+      this.resetMoveTimer()
+      playCaptureSound()
+
+      if (this.playerPos[0] <= 3) {
+        this.gameWon = true
+        this.stopTimers()
+        playVictorySound()
+        this.triggerSettlement()
+      }
+
+      this.refreshJumpTargets()
     },
 
     handleUndo() {
@@ -474,6 +496,7 @@ export default {
       this.score = Math.max(SCORE_FLOOR, this.score - UNDO_SCORE_PENALTY)
       this.clearScoreDeductionAnimation()
       this.resetMoveTimer()
+      this.refreshJumpTargets()
     },
 
     handleRestart() {
@@ -502,6 +525,7 @@ export default {
         this.moveTimerWarning = false
         this.hintPath = null
         this.settlementVisible = false
+        this.refreshJumpTargets()
       }
     },
 
