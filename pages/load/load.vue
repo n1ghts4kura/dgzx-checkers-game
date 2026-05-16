@@ -96,7 +96,7 @@
 import GameAppBar from '@/components/GameAppBar.vue'
 import IconSprite from '@/components/IconSprite.vue'
 import { importLevelFromBase64 } from '@/game-core/generator.js'
-import { ROWS_LAYOUT, BOARD_ROWS, BOARD_COLS, OBSTACLE, PLAYER } from '@/game-core/constants.js'
+import { ROWS_LAYOUT, BOARD_ROWS, BOARD_COLS, OBSTACLE, PLAYER, MAX_LOCAL_MAPS } from '@/game-core/constants.js'
 
 export default {
   name: 'BoardLoad',
@@ -208,7 +208,9 @@ export default {
       } catch (e) { /* ignore */ }
 
       localMaps.push({ map_name: name, map_str: this.mapStr.trim() })
+      while (localMaps.length > MAX_LOCAL_MAPS) localMaps.shift()
       uni.setStorageSync('local_maps', localMaps)
+      uni.setStorageSync('pending_switch_to_last', true)
       uni.navigateBack()
     }
   }

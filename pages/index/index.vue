@@ -3,6 +3,7 @@
     <!-- Background blobs -->
     <view class="bg-blobs">
       <view class="bg-blob bg-blob--top-left" />
+      <view class="bg-blob bg-blob--center" />
       <view class="bg-blob bg-blob--bottom-right" />
     </view>
 
@@ -10,9 +11,7 @@
     <GameAppBar
       :title="currentMapName"
       left-icon="menu_open"
-      right-icon="settings"
       @left-click="sidebarVisible = true"
-      @right-click="goSettings"
     />
 
     <!-- Sidebar drawer -->
@@ -23,7 +22,8 @@
       @close="sidebarVisible = false"
       @select-level="selectLevel"
       @create-level="createNewLevel"
-      @config-level="configLevel"
+      @share-level="handleShareLevel"
+      @delete-level="handleDeleteLevel"
       @import-level="handleImport"
     />
 
@@ -79,6 +79,48 @@
       @hint="handleHint"
       @restart="handleRestart"
     />
+
+    <!-- Share dialog -->
+    <view
+      class="dialog-overlay"
+      :class="{ 'dialog-overlay--visible': shareDialogVisible }"
+      @tap="shareDialogVisible = false"
+    >
+      <view class="share-card" @tap.stop>
+        <text class="share-title">{{ shareMapName }}</text>
+        <view class="share-code-wrapper">
+          <text class="share-code" selectable>{{ shareMapStr }}</text>
+        </view>
+        <view class="share-actions">
+          <view class="share-btn share-btn--copy" @tap="copyShareMapStr">
+            <text>{{ shareCopied ? '已复制' : '复制代码' }}</text>
+          </view>
+          <view class="share-btn share-btn--cancel" @tap="shareDialogVisible = false">
+            <text>关闭</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- Delete confirmation dialog -->
+    <view
+      class="dialog-overlay"
+      :class="{ 'dialog-overlay--visible': deleteDialogVisible }"
+      @tap="deleteDialogVisible = false"
+    >
+      <view class="delete-card" @tap.stop>
+        <text class="delete-title">确认删除？</text>
+        <text class="delete-subtitle">将永久删除「{{ deleteMapName }}」，不可恢复。</text>
+        <view class="delete-actions">
+          <view class="delete-btn delete-btn--yes" @tap="confirmDelete">
+            <text>删除</text>
+          </view>
+          <view class="delete-btn delete-btn--no" @tap="deleteDialogVisible = false">
+            <text>取消</text>
+          </view>
+        </view>
+      </view>
+    </view>
 
     <!-- Settlement modal -->
     <view v-if="settlementVisible" class="settlement-overlay" @tap="dismissSettlement">
@@ -179,7 +221,18 @@ export default {
       localMaps: [],
       levelNames: [],
       activeLevelIndex: 0,
-      maxHistorySize: 50
+      maxHistorySize: 50,
+
+      // Share dialog
+      shareDialogVisible: false,
+      shareMapStr: '',
+      shareMapName: '',
+      shareCopied: false,
+
+      // Delete dialog
+      deleteDialogVisible: false,
+      deleteMapIndex: -1,
+      deleteMapName: ''
     }
   },
 
@@ -229,6 +282,7 @@ export default {
 
   onShow() {
     this.refreshLevelsFromStorage()
+    this.checkPendingSwitch()
   },
 
   beforeDestroy() {
@@ -546,6 +600,10 @@ export default {
     },
 
     handleHint() {
+      if (this.hintPath) {
+        this.hintPath = null
+        return
+      }
       if (!this.playerPos) return
       const path = solveGameBFS(this.board, this.playerPos, this.indexToAxial, this.axialToIndex)
       this.hintPath = path
@@ -583,6 +641,17 @@ export default {
         this.initDefaultLocalMaps()
       }
       this.levelNames = this.localMaps.map(m => m.map_name)
+    },
+
+    checkPendingSwitch() {
+      try {
+        const pending = uni.getStorageSync('pending_switch_to_last')
+        if (pending && this.localMaps.length > 0) {
+          uni.removeStorageSync('pending_switch_to_last')
+          const newIndex = this.localMaps.length - 1
+          this.selectLevel(newIndex)
+        }
+      } catch (e) { /* ignore */ }
     },
 
     refreshLevelsFromStorage() {
@@ -652,7 +721,7 @@ export default {
 
     createNewLevel() {
       this.sidebarVisible = false
-      // TODO: Generate new level
+      uni.navigateTo({ url: '/pages/create/create' })
     },
 
     configLevel(index) {
@@ -664,9 +733,58 @@ export default {
       uni.navigateTo({ url: '/pages/load/load' })
     },
 
-    goSettings() {
-      uni.navigateTo({ url: '/pages/settings/settings' })
-    }
+    handleShareLevel(index) {
+      const map = this.localMaps[index]
+      if (!map) return
+      this.shareMapName = map.map_name
+      this.shareMapStr = map.map_str
+      this.shareCopied = false
+      this.shareDialogVisible = true
+    },
+
+    copyShareMapStr() {
+      uni.setClipboardData({
+        data: this.shareMapStr,
+        success: () => {
+          this.shareCopied = true
+          setTimeout(() => { this.shareCopied = false }, 2000)
+        }
+      })
+    },
+
+    handleDeleteLevel(index) {
+      const map = this.localMaps[index]
+      if (!map) return
+      this.deleteMapIndex = index
+      this.deleteMapName = map.map_name
+      this.deleteDialogVisible = true
+    },
+
+    confirmDelete() {
+      if (this.deleteMapIndex < 0) return
+
+      this.localMaps.splice(this.deleteMapIndex, 1)
+      uni.setStorageSync('local_maps', this.localMaps)
+      this.levelNames = this.localMaps.map(m => m.map_name)
+
+      if (this.localMaps.length === 0) {
+        this.initDefaultLocalMaps()
+        this.levelNames = this.localMaps.map(m => m.map_name)
+        this.activeLevelIndex = 0
+        this.initGame()
+      } else if (this.activeLevelIndex >= this.localMaps.length) {
+        this.activeLevelIndex = this.localMaps.length - 1
+        this.selectLevel(this.activeLevelIndex)
+      } else if (this.deleteMapIndex === this.activeLevelIndex) {
+        this.selectLevel(this.activeLevelIndex)
+      } else if (this.deleteMapIndex < this.activeLevelIndex) {
+        this.activeLevelIndex--
+      }
+
+      this.deleteDialogVisible = false
+      this.deleteMapIndex = -1
+    },
+
   }
 }
 </script>
@@ -701,7 +819,12 @@ export default {
 .bg-blob {
   position: absolute;
   border-radius: 50%;
-  filter: blur(160rpx);
+  filter: blur(60rpx);
+  will-change: transform, border-radius, opacity;
+  animation-duration: 17s;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+  animation-direction: alternate;
 }
 
 .bg-blob--top-left {
@@ -710,7 +833,17 @@ export default {
   width: 100vw;
   height: 100vw;
   background: $color-liquid-accent;
-  opacity: 0.4;
+  animation-name: blob-wander-top-left;
+}
+
+.bg-blob--center {
+  top: 30%;
+  right: -20%;
+  width: 80vw;
+  height: 80vw;
+  background: $color-primary-container;
+  animation-name: blob-wander-center;
+  animation-duration: 23s;
 }
 
 .bg-blob--bottom-right {
@@ -719,7 +852,34 @@ export default {
   width: 120vw;
   height: 120vw;
   background: $color-primary-container;
-  opacity: 0.3;
+  animation-name: blob-wander-bottom-right;
+  animation-duration: 29s;
+}
+
+// ── Blob animations ──
+
+@keyframes blob-wander-top-left {
+  0%   { transform: translate(0, 0) rotate(0deg) scale(1);    opacity: 0.35; border-radius: 50% 50% 50% 50%; }
+  25%  { transform: translate(6%, -4%) rotate(3deg) scale(1.1);  opacity: 0.45; border-radius: 58% 42% 54% 46%; }
+  50%  { transform: translate(-2%, 7%) rotate(-2deg) scale(1.15); opacity: 0.38; border-radius: 44% 56% 48% 52%; }
+  75%  { transform: translate(-6%, 2%) rotate(4deg) scale(1.05);  opacity: 0.42; border-radius: 53% 47% 58% 42%; }
+  100% { transform: translate(3%, -5%) rotate(-3deg) scale(1);    opacity: 0.35; border-radius: 50% 50% 50% 50%; }
+}
+
+@keyframes blob-wander-center {
+  0%   { transform: translate(0, 0) rotate(0deg) scale(1);    opacity: 0.25; border-radius: 42% 58% 48% 52%; }
+  25%  { transform: translate(-8%, 5%) rotate(-4deg) scale(1.2);  opacity: 0.35; border-radius: 55% 45% 60% 40%; }
+  50%  { transform: translate(4%, -7%) rotate(2deg) scale(0.95);  opacity: 0.28; border-radius: 48% 52% 42% 58%; }
+  75%  { transform: translate(8%, -3%) rotate(5deg) scale(1.15);  opacity: 0.32; border-radius: 60% 40% 55% 45%; }
+  100% { transform: translate(-3%, 6%) rotate(-2deg) scale(1);    opacity: 0.25; border-radius: 42% 58% 48% 52%; }
+}
+
+@keyframes blob-wander-bottom-right {
+  0%   { transform: translate(0, 0) rotate(0deg) scale(1);    opacity: 0.25; border-radius: 50% 50% 50% 50%; }
+  25%  { transform: translate(-5%, -3%) rotate(3deg) scale(1.1);  opacity: 0.33; border-radius: 38% 62% 42% 58%; }
+  50%  { transform: translate(4%, -6%) rotate(-4deg) scale(0.85); opacity: 0.22; border-radius: 56% 44% 62% 38%; }
+  75%  { transform: translate(-2%, 5%) rotate(2deg) scale(1.05);  opacity: 0.30; border-radius: 45% 55% 38% 62%; }
+  100% { transform: translate(3%, -2%) rotate(-1deg) scale(1);    opacity: 0.25; border-radius: 50% 50% 50% 50%; }
 }
 
 // ── Board area ──
@@ -820,7 +980,7 @@ export default {
 .warning-toast {
   position: absolute;
   top: 16rpx;
-  right: 16rpx;
+  right: 8rpx;
   z-index: 35;
   background: rgba(255, 255, 255, 0.85);
   backdrop-filter: blur(8px);
@@ -844,6 +1004,28 @@ export default {
   color: $color-error;
   font-weight: 700;
   white-space: nowrap;
+}
+
+// ── Dialog overlay (share + delete) ──
+
+.dialog-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 100;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 180ms ease;
+
+  &--visible {
+    opacity: 1;
+    pointer-events: auto;
+  }
 }
 
 // ── Settlement overlay ──
@@ -926,6 +1108,128 @@ export default {
     background: $color-primary;
     color: $color-on-primary;
     box-shadow: 0 4rpx 16rpx rgba(0, 108, 73, 0.3);
+  }
+}
+
+// ── Share dialog ──
+
+.share-card {
+  background: white;
+  border-radius: 32rpx;
+  padding: 48rpx;
+  width: 560rpx;
+  max-width: 90vw;
+  box-shadow: 0 16rpx 48rpx rgba(0, 0, 0, 0.2);
+}
+
+.share-title {
+  font-family: $font-headline;
+  font-size: $fs-headline-lg-mobile;
+  font-weight: 800;
+  color: $color-primary;
+  display: block;
+  text-align: center;
+  margin-bottom: 24rpx;
+}
+
+.share-code-wrapper {
+  background: $color-surface-container-low;
+  border-radius: 16rpx;
+  padding: 24rpx;
+  max-height: 240rpx;
+  overflow-y: auto;
+  margin-bottom: 24rpx;
+}
+
+.share-code {
+  font-family: monospace;
+  font-size: 12px;
+  color: $color-on-surface-variant;
+  word-break: break-all;
+  line-height: 1.6;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.share-actions {
+  display: flex;
+  gap: 16rpx;
+  justify-content: center;
+}
+
+.share-btn {
+  padding: 20rpx 48rpx;
+  border-radius: 16rpx;
+  font-family: $font-headline;
+  font-size: $fs-body-md;
+  font-weight: 700;
+  text-align: center;
+
+  &--copy {
+    background: $color-primary;
+    color: $color-on-primary;
+    box-shadow: 0 4rpx 16rpx rgba(0, 108, 73, 0.3);
+  }
+
+  &--cancel {
+    background: $color-surface-container-high;
+    color: $color-on-surface-variant;
+  }
+}
+
+// ── Delete confirmation dialog ──
+
+.delete-card {
+  background: white;
+  border-radius: 32rpx;
+  padding: 48rpx;
+  width: 500rpx;
+  max-width: 85vw;
+  box-shadow: 0 16rpx 48rpx rgba(0, 0, 0, 0.2);
+  text-align: center;
+}
+
+.delete-title {
+  font-family: $font-headline;
+  font-size: $fs-headline-lg-mobile;
+  font-weight: 800;
+  color: $color-error;
+  display: block;
+  margin-bottom: 16rpx;
+}
+
+.delete-subtitle {
+  font-family: $font-body;
+  font-size: $fs-body-sm;
+  color: $color-on-surface-variant;
+  display: block;
+  margin-bottom: 32rpx;
+  line-height: 1.5;
+}
+
+.delete-actions {
+  display: flex;
+  gap: 16rpx;
+  justify-content: center;
+}
+
+.delete-btn {
+  padding: 20rpx 48rpx;
+  border-radius: 16rpx;
+  font-family: $font-headline;
+  font-size: $fs-body-md;
+  font-weight: 700;
+  text-align: center;
+
+  &--yes {
+    background: $color-error;
+    color: $color-on-error;
+    box-shadow: 0 4rpx 16rpx rgba(186, 26, 26, 0.3);
+  }
+
+  &--no {
+    background: $color-surface-container-high;
+    color: $color-on-surface-variant;
   }
 }
 </style>
