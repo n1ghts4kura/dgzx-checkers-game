@@ -1,21 +1,23 @@
 <template>
-  <text
+  <image
     class="icon-sprite"
-    :style="{ fontSize: size + 'px', width: size + 'px', height: size + 'px' }"
-  >{{ ligatureName }}</text>
+    :src="iconSrc"
+    :style="{ width: size + 'px', height: size + 'px' }"
+    mode="aspectFit"
+  />
 </template>
 
 <script>
-const LIGATURE_MAP = {
-  add_circle: 'add_circle',
-  grid_on: 'grid_on',
-  apps: 'apps',
-  menu_open: 'menu_open',
-  settings: 'settings',
-  arrow_back: 'arrow_back',
-  undo: 'undo',
-  refresh: 'refresh',
-  hint: 'lightbulb'
+const ICON_MAP = {
+  add_circle: '/static/icons/add_circle@3x.png',
+  grid_on: '/static/icons/grid_on@3x.png',
+  apps: '/static/icons/apps@3x.png',
+  menu_open: '/static/icons/menu_open@3x.png',
+  settings: '/static/icons/settings@3x.png',
+  arrow_back: '/static/icons/arrow_back@3x.png',
+  undo: '/static/icons/undo@3x.png',
+  refresh: '/static/icons/refresh@3x.png',
+  hint: '/static/icons/hint@3x.png'
 }
 
 export default {
@@ -24,7 +26,7 @@ export default {
     name: {
       type: String,
       required: true,
-      validator: (v) => ['add_circle', 'grid_on', 'apps', 'menu_open', 'settings', 'arrow_back', 'undo', 'refresh', 'hint'].includes(v)
+      validator: (v) => Object.keys(ICON_MAP).includes(v)
     },
     size: {
       type: [Number, String],
@@ -32,23 +34,16 @@ export default {
     }
   },
   computed: {
-    ligatureName() {
-      return LIGATURE_MAP[this.name] || this.name
+    iconSrc() {
+      return ICON_MAP[this.name] || ''
     }
   }
 }
 </script>
 
-<style>
+<style scoped>
 .icon-sprite {
-  font-family: 'Material Symbols Outlined', sans-serif;
-  font-weight: 400;
-  font-style: normal;
-  line-height: 1;
   display: inline-block;
-  white-space: nowrap;
   flex-shrink: 0;
-  overflow: hidden;
-  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
 }
 </style>

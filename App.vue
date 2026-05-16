@@ -16,11 +16,6 @@
 				source: 'url("https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;700&display=swap")',
 				success: function() { console.log('Hanken Grotesk loaded') }
 			})
-			wx.loadFontFace({
-				family: 'Material Symbols Outlined',
-				source: 'url("https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL@20..48,100..700,0..1&display=swap")',
-				success: function() { console.log('Material Symbols loaded') }
-			})
 			// #endif
 		},
 		onShow: function() {
@@ -33,15 +28,12 @@
 </script>
 
 <style>
-		/* 本地字体 — 仅 H5（MP 由 wx.loadFontFace 加载） */
-		/* #ifdef H5 */
-		@import './common/fonts.css';
-		/* #endif */
+	/* 本地自托管字体 — 仅 H5（MP 由 wx.loadFontFace 加载） */
+	/* #ifdef H5 */
+	@import './common/fonts.css';
+	/* #endif */
 
-		/* Material Symbols — H5 CDN / MP wx.loadFontFace (2.3MB 不打包) */
-		/* #ifdef H5 */
-		@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL@20..48,100..700,0..1&display=swap');
-		/* #endif */
+	/* 图标 — 本地 PNG (static/icons/)，无需 CDN */
 
 	/* 全局页面样式 */
 	page {

@@ -1,6 +1,6 @@
 /* ============================================================
    Self-hosted fonts — Manrope, Hanken Grotesk (WOFF2, latin subset)
-   Material Symbols icon font loaded from CDN (too large to bundle at 2.3MB)
+   Icons are local PNG files in static/icons/
    ============================================================ */
 
 /* --- Manrope (variable font, weights 700 & 800) ------------ */
@@ -49,9 +49,3 @@
     U+FEFF, U+FFFD;
 }
 
-/*
-  Material Symbols Outlined — 图标字体从 Google Fonts CDN 加载
-  原因: 完整字体 2.3MB，超出小程序 2MB 单文件限制，无法打包到 static/
-  H5: 通过 CSS @import 远程加载 (App.vue <style>)
-  MP: 通过 wx.loadFontFace() 加载 (App.vue onLaunch)
-*/
