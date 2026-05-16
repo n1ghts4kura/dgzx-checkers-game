@@ -19,8 +19,14 @@
       <view class="preview-section">
         <view class="preview-circle">
           <view class="preview-circle__glow" />
-          <view class="preview-circle__hex">
-            <IconSprite name="grid_on" :size="48" />
+          <view class="preview-board" :style="previewBoardStyle">
+            <view
+              v-for="cell in miniBoardCells"
+              :key="`p-${cell.r}-${cell.c}`"
+              class="preview-cell"
+              :class="cell.classes"
+              :style="cell.style"
+            />
           </view>
         </view>
       </view>
@@ -64,31 +70,108 @@
         </view>
       </view>
     </view>
-
-    <!-- Generate Button -->
-    <view class="generate-section">
-      <view class="btn-generate" @tap="onGenerate">
-        <IconSprite name="hint" :size="24" />
-        <text class="btn-generate__text">生成地图</text>
-      </view>
-    </view>
   </view>
 </template>
 
 <script>
 import GameAppBar from '@/components/GameAppBar.vue'
-import IconSprite from '@/components/IconSprite.vue'
+import { ROWS_LAYOUT, BOARD_ROWS, BOARD_COLS, COLORS } from '@/game-core/constants.js'
+
+const SAMPLE_OBSTACLES = [
+  [5, 5, COLORS.PURPLE], [6, 7, COLORS.PURPLE],
+  [7, 3, COLORS.BLUE], [8, 6, COLORS.BLUE],
+  [9, 5, COLORS.PINK],
+  [10, 3, COLORS.YELLOW], [10, 8, COLORS.YELLOW],
+  [11, 6, COLORS.ORANGE],
+  [13, 7, COLORS.RED], [15, 7, COLORS.RED]
+]
 
 export default {
   name: 'BoardConfig',
-  components: { GameAppBar, IconSprite },
+  components: { GameAppBar },
   data() {
     return {
       stepCount: '20',
       fixedStart: true,
-      highQuality: true
+      highQuality: true,
+      miniCellSize: 16
     }
   },
+  computed: {
+    previewBoardBounds() {
+      const S = this.miniCellSize
+      let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity
+      for (let r = 0; r < BOARD_ROWS; r++) {
+        const count = ROWS_LAYOUT[r]
+        const offset = Math.floor((BOARD_COLS - count) / 2)
+        for (let c = offset; c < offset + count; c++) {
+          const cx = c * S + (r % 2) * S / 2
+          const cy = r * S * 0.86
+          if (cx < minX) minX = cx
+          if (cx > maxX) maxX = cx
+          if (cy < minY) minY = cy
+          if (cy > maxY) maxY = cy
+        }
+      }
+      return { minX, maxX, minY, maxY }
+    },
+
+    miniBoardCells() {
+      const S = this.miniCellSize
+      const b = this.previewBoardBounds
+      const cells = []
+      const obstacleMap = new Map()
+      SAMPLE_OBSTACLES.forEach(([r, c, color]) => {
+        obstacleMap.set(`${r},${c}`, color)
+      })
+
+      for (let r = 0; r < BOARD_ROWS; r++) {
+        const count = ROWS_LAYOUT[r]
+        const offset = Math.floor((BOARD_COLS - count) / 2)
+        for (let c = 0; c < BOARD_COLS; c++) {
+          if (c < offset || c >= offset + count) continue
+
+          const cx = c * S + (r % 2) * S / 2 - b.minX + S / 2
+          const cy = r * S * 0.86 - b.minY + S / 2
+          const key = `${r},${c}`
+          const color = obstacleMap.get(key)
+
+          cells.push({
+            r, c,
+            style: {
+              left: cx + 'px',
+              top: cy + 'px',
+              width: S + 'px',
+              height: S + 'px',
+              '--preview-cell-color': color || 'transparent'
+            },
+            classes: {
+              'preview-cell--obstacle': color != null,
+              'preview-cell--player': r === 16 && c === 8,
+              'preview-cell--empty': color == null && !(r === 16 && c === 8)
+            }
+          })
+        }
+      }
+      return cells
+    },
+
+    previewBoardStyle() {
+      const b = this.previewBoardBounds
+      const S = this.miniCellSize
+      const boardW = b.maxX - b.minX + S
+      const boardH = b.maxY - b.minY + S
+      const available = 260
+      const scale = Math.min(1, available / Math.max(boardW, boardH))
+      return {
+        width: boardW + 'px',
+        height: boardH + 'px',
+        transform: `scale(${scale})`,
+        transformOrigin: 'center center'
+      }
+    }
+  },
+
   onLoad(options) {
     if (options.index != null) {
       this.levelIndex = Number(options.index)
@@ -218,13 +301,32 @@ export default {
     pointer-events: none;
   }
 
-  &__hex {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    opacity: 0.6;
-    color: $color-primary;
-  }
+.preview-board {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.preview-cell {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  box-sizing: border-box;
+}
+
+.preview-cell--empty {
+  background: #e8e8e8;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.preview-cell--obstacle {
+  background: var(--preview-cell-color);
+  border: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+.preview-cell--player {
+  background: #00C853;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
 }
 
 // ── Configuration card ──
@@ -338,45 +440,4 @@ export default {
   }
 }
 
-// ── Generate button ──
-
-.generate-section {
-  width: 100%;
-  height: auto;
-  flex-shrink: 0;
-  margin-top: auto;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  position: relative;
-  z-index: 10;
-  padding: 16rpx 0 32rpx;
-}
-
-.btn-generate {
-  width: calc(100% - 48rpx);
-  max-width: 500rpx;
-  background: $color-background;
-  border: none;
-  border-radius: $radius-full;
-  padding: 20rpx 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 16rpx;
-  font-family: $font-headline;
-  font-size: $fs-headline-lg-mobile;
-  font-weight: 700;
-  color: $color-primary;
-  box-shadow: 0 20rpx 50rpx rgba(16, 185, 129, 0.4);
-  transition: all 0.3s;
-
-  &:active {
-    transform: scale(0.98);
-  }
-
-  &__text {
-    letter-spacing: 0.05em;
-  }
-}
 </style>
