@@ -13,6 +13,13 @@
 				"navigationStyle": "custom",
 				"disableScroll": false
 			}
+		},
+		{
+			"path": "pages/config/config",
+			"style": {
+				"navigationStyle": "custom",
+				"disableScroll": false
+			}
 		}
 	],
 	"globalStyle": {

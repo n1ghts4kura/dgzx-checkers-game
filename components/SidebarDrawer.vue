@@ -28,6 +28,9 @@
           >
             <IconSprite :name="idx === activeLevelIndex ? 'grid_on' : 'apps'" :size="20" />
             <text class="nav-item__text">棋盘 - {{ name }}</text>
+            <view class="nav-item__config" @tap.stop="$emit('config-level', idx)">
+              <IconSprite name="settings" :size="18" />
+            </view>
           </view>
         </nav>
       </view>
@@ -46,7 +49,7 @@ export default {
     levelNames: { type: Array, default: () => ['棋盘-1', '棋盘-2'] },
     activeLevelIndex: { type: Number, default: 0 }
   },
-  emits: ['close', 'select-level', 'create-level']
+  emits: ['close', 'select-level', 'create-level', 'config-level']
 }
 </script>
 
@@ -100,6 +103,7 @@ export default {
 }
 
 .btn-create {
+  margin-top: 64rpx;
   height: 144rpx;
   width: 100%;
   background: $color-primary;
@@ -157,5 +161,19 @@ export default {
 .nav-item__text {
   font-family: $font-body;
   font-size: $fs-body-md;
+}
+
+.nav-item__config {
+  margin-left: auto;
+  margin-right: 16rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.5;
+  transition: opacity 0.2s;
+
+  &:active {
+    opacity: 1;
+  }
 }
 </style>
