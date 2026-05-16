@@ -16,8 +16,7 @@
           :style="{
             color: moveTimerRedIntensity > 0
               ? `rgb(${Math.round(255 * (1 - moveTimerRedIntensity))}, 0, 0)`
-              : undefined,
-            transform: moveTimerBounce ? `scale(${1 + Math.sin(Date.now() / 200) * 0.2})` : undefined
+              : undefined
           }"
         >
           {{ moveTimeFormatted }}s
@@ -62,7 +61,6 @@ export default {
     moveTimeFormatted: { type: String, default: '0.00' },
     moveTimerWarning: { type: Boolean, default: false },
     moveTimerRedIntensity: { type: Number, default: 0 },
-    moveTimerBounce: { type: Boolean, default: false },
     canUndo: { type: Boolean, default: false }
   },
   emits: ['undo', 'hint', 'restart']
