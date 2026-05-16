@@ -136,6 +136,69 @@ export function fastSolver(board, playerPos, indexToAxial, axialToIndex) {
   return path ? path.length - 1 : 0;
 }
 
+// ── Async variants with cooperative scheduling ──
+// NOTE: Keep in sync with sync versions above.
+// Differences: async keyword, scheduler param, await scheduler.yieldIfNeeded() in while loop.
+
+export async function solveGameBFSAsync(board, playerPos, indexToAxial, axialToIndex, scheduler) {
+  const startObsStr = getBoardObsHash(board);
+  const startHash = `${playerPos[0]},${playerPos[1]}${startObsStr}`;
+
+  const queue = [{
+    r: playerPos[0],
+    c: playerPos[1],
+    obsStr: startObsStr,
+    path: [[playerPos[0], playerPos[1]]]
+  }];
+
+  const visited = new Set();
+  visited.add(startHash);
+
+  let iterations = 0;
+
+  while (queue.length > 0) {
+    iterations++;
+    if (iterations > MAX_BFS_ITERATIONS) return null;
+
+    await scheduler.yieldIfNeeded();
+
+    const current = queue.shift();
+
+    if (current.r <= WIN_ROW_THRESHOLD) {
+      return current.path;
+    }
+
+    const currentObstacles = new Set(current.obsStr.split('|').filter(s => s !== ''));
+
+    const jumps = getDynamicJumpsFromSet(indexToAxial, axialToIndex, current.r, current.c, currentObstacles);
+
+    for (const [tr, tc, mr, mc] of jumps) {
+      const midKey = `${mr},${mc}`;
+      if (!currentObstacles.has(midKey)) continue;
+
+      const newObsStr = current.obsStr.replace(`|${midKey}|`, '|');
+      const nextHash = `${tr},${tc}${newObsStr}`;
+
+      if (!visited.has(nextHash)) {
+        visited.add(nextHash);
+        queue.push({
+          r: tr,
+          c: tc,
+          obsStr: newObsStr,
+          path: [...current.path, [tr, tc]]
+        });
+      }
+    }
+  }
+
+  return null;
+}
+
+export async function fastSolverAsync(board, playerPos, indexToAxial, axialToIndex, scheduler) {
+  const path = await solveGameBFSAsync(board, playerPos, indexToAxial, axialToIndex, scheduler);
+  return path ? path.length - 1 : 0;
+}
+
 // ── Simple BFS on current board (no obstacle removal) ──
 
 export function findSolutionPath(board, playerPos, indexToAxial, axialToIndex) {
