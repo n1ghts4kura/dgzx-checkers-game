@@ -277,7 +277,7 @@ export default {
 }
 
 .config-input {
-  width: 100%;
+  width: 80%;
   background: rgba(255, 255, 255, 0.4);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
