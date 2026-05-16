@@ -607,13 +607,12 @@ export default {
 
 .board-area {
   flex: 1;
+  overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
   position: relative;
   z-index: 10;
-  margin-top: calc(150rpx + 73px);
-  margin-bottom: 94px;
 }
 
 .board-container {

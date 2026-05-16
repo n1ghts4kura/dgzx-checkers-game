@@ -13,51 +13,54 @@
       @left-click="goBack"
     />
 
-    <!-- Board Preview -->
-    <view class="preview-section">
-      <view class="preview-circle">
-        <view class="preview-circle__glow" />
-        <view class="preview-circle__hex">
-          <IconSprite name="grid_on" :size="48" />
-        </view>
-      </view>
-    </view>
-
-    <!-- Configuration Card -->
-    <view class="config-card">
-      <view class="config-card__glow" />
-
-      <!-- Row 1: Solution Steps -->
-      <view class="config-row">
-        <text class="config-label">题解步数</text>
-        <view class="config-input-wrapper">
-          <input
-            class="config-input"
-            type="text"
-            :value="stepCount"
-            placeholder="决赛使用的是20步!"
-            @input="onStepInput"
-          />
+    <!-- Content area -->
+    <view class="config-content">
+      <!-- Board Preview -->
+      <view class="preview-section">
+        <view class="preview-circle">
+          <view class="preview-circle__glow" />
+          <view class="preview-circle__hex">
+            <IconSprite name="grid_on" :size="48" />
+          </view>
         </view>
       </view>
 
-      <view class="config-divider" />
+      <!-- Configuration Card -->
+      <view class="config-card">
+        <view class="config-card__glow" />
 
-      <!-- Row 2: Fixed Starting Point -->
-      <view class="config-row" @tap="toggleFixedStart">
-        <text class="config-label config-label--flex">固定起点到底部</text>
-        <view class="toggle" :class="{ 'toggle--active': fixedStart }">
-          <view class="toggle__thumb" :class="{ 'toggle__thumb--active': fixedStart }" />
+        <!-- Row 1: Solution Steps -->
+        <view class="config-row">
+          <text class="config-label">题解步数</text>
+          <view class="config-input-wrapper">
+            <input
+              class="config-input"
+              type="text"
+              :value="stepCount"
+              placeholder="决赛使用的是20步!"
+              @input="onStepInput"
+            />
+          </view>
         </view>
-      </view>
 
-      <view class="config-divider" />
+        <view class="config-divider" />
 
-      <!-- Row 3: High Quality Map -->
-      <view class="config-row" @tap="toggleHighQuality">
-        <text class="config-label config-label--flex">生成高质量地图</text>
-        <view class="toggle" :class="{ 'toggle--active': highQuality }">
-          <view class="toggle__thumb" :class="{ 'toggle__thumb--active': highQuality }" />
+        <!-- Row 2: Fixed Starting Point -->
+        <view class="config-row" @tap="toggleFixedStart">
+          <text class="config-label config-label--flex">固定起点到底部</text>
+          <view class="toggle" :class="{ 'toggle--active': fixedStart }">
+            <view class="toggle__thumb" :class="{ 'toggle__thumb--active': fixedStart }" />
+          </view>
+        </view>
+
+        <view class="config-divider" />
+
+        <!-- Row 3: High Quality Map -->
+        <view class="config-row" @tap="toggleHighQuality">
+          <text class="config-label config-label--flex">生成高质量地图</text>
+          <view class="toggle" :class="{ 'toggle--active': highQuality }">
+            <view class="toggle__thumb" :class="{ 'toggle__thumb--active': highQuality }" />
+          </view>
         </view>
       </view>
     </view>
@@ -65,7 +68,6 @@
     <!-- Generate Button -->
     <view class="generate-section">
       <view class="btn-generate" @tap="onGenerate">
-        <view class="btn-generate__shine" />
         <IconSprite name="hint" :size="24" />
         <text class="btn-generate__text">生成地图</text>
       </view>
@@ -129,7 +131,6 @@ export default {
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  align-items: center;
   background-color: $color-background;
   font-family: $font-body;
   font-size: $fs-body-md;
@@ -171,15 +172,29 @@ export default {
   opacity: 0.3;
 }
 
+// ── Content area ──
+
+.config-content {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-left: 12rpx;
+  margin-right: 12rpx;
+  padding-top: 32rpx;
+  padding-bottom: 16rpx;
+}
+
 // ── Preview circle ──
 
 .preview-section {
   width: 100%;
   display: flex;
   justify-content: center;
-  margin-top: 200rpx;
+  margin-top: 20rpx;
   position: relative;
   z-index: 10;
+  flex-shrink: 0;
 }
 
 .preview-circle {
@@ -221,7 +236,7 @@ export default {
   @include glass-border;
   @include emerald-shadow(4px, 30px, 0.1);
   border-radius: $radius-default;
-  padding: 80rpx;
+  padding: 18rpx 24rpx;
   display: flex;
   flex-direction: column;
   gap: 0;
@@ -258,7 +273,7 @@ export default {
 }
 
 .config-input-wrapper {
-  width: 50%;
+  width: 15%;
 }
 
 .config-input {
@@ -326,16 +341,22 @@ export default {
 // ── Generate button ──
 
 .generate-section {
-  width: calc(100% - 48rpx);
-  max-width: 500rpx;
+  width: 100%;
+  height: auto;
+  flex-shrink: 0;
+  margin-top: auto;
+  display: flex;
+  justify-content: center;
+  align-items: center;
   position: relative;
   z-index: 10;
-  margin-top: 48rpx;
+  padding: 16rpx 0 32rpx;
 }
 
 .btn-generate {
-  width: 100%;
-  background: transparent;
+  width: calc(100% - 48rpx);
+  max-width: 500rpx;
+  background: $color-background;
   border: none;
   border-radius: $radius-full;
   padding: 20rpx 0;
@@ -347,27 +368,11 @@ export default {
   font-size: $fs-headline-lg-mobile;
   font-weight: 700;
   color: $color-primary;
-  box-shadow:
-    0 20rpx 50rpx rgba(16, 185, 129, 0.4),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.2);
-  position: relative;
-  overflow: hidden;
+  box-shadow: 0 20rpx 50rpx rgba(16, 185, 129, 0.4);
   transition: all 0.3s;
 
   &:active {
     transform: scale(0.98);
-  }
-
-  &__shine {
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(
-      90deg,
-      transparent 0%,
-      rgba(255, 255, 255, 0.3) 50%,
-      transparent 100%
-    );
-    transform: translateX(-100%);
   }
 
   &__text {

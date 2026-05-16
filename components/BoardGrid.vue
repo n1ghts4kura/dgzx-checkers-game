@@ -43,16 +43,30 @@ export default {
     }
   },
   computed: {
+    cellBounds() {
+      const S = this.cellSize
+      let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity
+      for (let r = 0; r < BOARD_ROWS; r++) {
+        for (let c = 0; c < BOARD_COLS; c++) {
+          if (this.board[r][c] === INVALID) continue
+          const cx = c * S + (r % 2) * S / 2
+          const cy = r * S * 0.86
+          if (cx < minX) minX = cx
+          if (cx > maxX) maxX = cx
+          if (cy < minY) minY = cy
+          if (cy > maxY) maxY = cy
+        }
+      }
+      return { minX, maxX, minY, maxY }
+    },
+
     boardStyle() {
       const S = this.cellSize
-      const maxCols = Math.max(...ROWS_LAYOUT)
-      const w = (maxCols + 0.5) * S
-      const h = BOARD_ROWS * S * 0.86 + S
+      const b = this.cellBounds
       return {
         position: 'relative',
-        width: w + 'px',
-        height: h + 'px',
-        margin: '0 auto'
+        width: (b.maxX - b.minX + S) + 'px',
+        height: (b.maxY - b.minY + S) + 'px'
       }
     },
 
@@ -71,12 +85,14 @@ export default {
 
     renderedCells() {
       const S = this.cellSize
+      const b = this.cellBounds
+      const pad = S / 2
       const cells = []
       for (let r = 0; r < BOARD_ROWS; r++) {
         for (let c = 0; c < BOARD_COLS; c++) {
           if (this.board[r][c] === INVALID) continue
-          const cx = c * S + (r % 2) * S / 2
-          const cy = r * S * 0.86
+          const cx = c * S + (r % 2) * S / 2 - b.minX + pad
+          const cy = r * S * 0.86 - b.minY + pad
           cells.push({
             r,
             c,
@@ -98,14 +114,16 @@ export default {
     hintConnectors() {
       if (!this.hintPath || this.hintPath.length < 2) return []
       const S = this.cellSize
+      const b = this.cellBounds
+      const pad = S / 2
       const result = []
       for (let i = 0; i < this.hintPath.length - 1; i++) {
         const [r1, c1] = this.hintPath[i]
         const [r2, c2] = this.hintPath[i + 1]
-        const x1 = c1 * S + (r1 % 2) * S / 2
-        const y1 = r1 * S * 0.86
-        const x2 = c2 * S + (r2 % 2) * S / 2
-        const y2 = r2 * S * 0.86
+        const x1 = c1 * S + (r1 % 2) * S / 2 - b.minX + pad
+        const y1 = r1 * S * 0.86 - b.minY + pad
+        const x2 = c2 * S + (r2 % 2) * S / 2 - b.minX + pad
+        const y2 = r2 * S * 0.86 - b.minY + pad
 
         const dx = x2 - x1
         const dy = y2 - y1
@@ -198,8 +216,7 @@ export default {
 
 // ── Wrapper ──
 .board-grid-wrapper {
-  width: 100%;
-  height: 100%;
+  flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;

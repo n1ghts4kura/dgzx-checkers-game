@@ -72,11 +72,6 @@ export default {
 @import '../common/glass-utilities';
 
 .bottom-dock {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  z-index: 50;
   background: transparent;
   border-top: 1px solid $color-glass-stroke;
   border-radius: 60rpx 60rpx 0 0;
@@ -86,6 +81,7 @@ export default {
   gap: 12rpx;
   height: 94px;
   min-height: 94px;
+  flex-shrink: 0;
 }
 
 .dock-stats {

@@ -34,7 +34,6 @@ export default {
 @import '../common/glass-utilities';
 
 .app-bar {
-  @include fixed-top;
   margin-top: 150rpx;
   margin-left: 4rpx;
   margin-right: 4rpx;
@@ -48,6 +47,7 @@ export default {
   align-items: center;
   padding: 0 $sp-gutter;
   height: 73px;
+  flex-shrink: 0;
 }
 
 .app-bar__btn {
