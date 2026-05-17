@@ -10,7 +10,7 @@ import { createEmptyBoard, createEmptyColorLayer, createAxialMapping, logicalToI
 import {
   getAllValidReverseMoves, executeReverseMove, undoReverseMove
 } from './logic.js';
-import { solveGameBFS, fastSolver, verifyUniqueSolution, solveFromObstacleSet, fastSolverAsync } from './solver.js';
+import { solveGameBFS, fastSolver, verifyUniqueSolution, solveFromObstacleSet } from './solver.js';
 
 // ── Random top-triangle position ─────────────
 
@@ -27,119 +27,7 @@ export function getRandomTopTrianglePos(board) {
   return candidates[Math.floor(Math.random() * candidates.length)];
 }
 
-// ── Recursive reverse-growth generator ───────
-
-export function growPathElegant(
-  board, boardColors, playerPos, indexToAxial, axialToIndex,
-  currentDepth, targetDepth, startTime, originalTopPos, isHighQuality
-) {
-  if (currentDepth >= targetDepth) return true;
-
-  const timeLimit = targetDepth > 20 ? GENERATION_TIMEOUT_LONG : GENERATION_TIMEOUT_BASE;
-  if (Date.now() - startTime > timeLimit) return false;
-
-  let moves = getAllValidReverseMoves(board, boardColors, playerPos, indexToAxial, axialToIndex);
-
-  moves.forEach(move => {
-    const [pr, pc] = move.prevPos;
-    const [cr, cc] = move.currentPos;
-
-    const isGoingUp = pr < cr;
-    const progress = currentDepth / targetDepth;
-    let score = 0;
-
-    if (progress > 0.85) {
-      if (isGoingUp) score = -50.0;
-      else score = pr * 6.0;
-    } else {
-      score = pr * 1.5;
-      if (isGoingUp && pr > 2) {
-        score += 12.0;
-      }
-    }
-
-    const dist = Math.sqrt((pr - originalTopPos[0]) ** 2 + (pc - originalTopPos[1]) ** 2);
-    score += dist * 1.0;
-
-    let neighborObstacles = 0;
-    const posKey = `${pr},${pc}`;
-    if (indexToAxial.has(posKey)) {
-      const [q, r] = indexToAxial.get(posKey);
-      for (const [dq, dr] of AXIAL_DIRS) {
-        const nKey = `${q + dq},${r + dr}`;
-        if (axialToIndex.has(nKey)) {
-          const [nr, nc] = axialToIndex.get(nKey);
-          if (board[nr][nc] === OBSTACLE) neighborObstacles++;
-        }
-      }
-    }
-    if (neighborObstacles > 1) score -= 5;
-    if (neighborObstacles > 2) score -= 20;
-
-    if (isHighQuality) {
-      const jumpDist = Math.sqrt((pr - cr) ** 2 + (pc - cc) ** 2);
-      score += jumpDist * 2.5;
-      const colDiff = Math.abs(pc - cc);
-      score += colDiff * 2.0;
-    }
-
-    const noise = Math.random() * (10 - currentDepth * 0.2);
-    move.score = score + noise;
-  });
-
-  moves.sort((a, b) => b.score - a.score);
-
-  let limit = 6;
-  if (currentDepth > 5 && currentDepth < targetDepth - 5) {
-    limit = 12;
-  }
-  if (targetDepth > 24) limit += 4;
-  if (isHighQuality) limit += 4;
-
-  const candidateLimit = Math.min(moves.length, limit);
-
-  let failureCount = 0;
-  for (let i = 0; i < candidateLimit; i++) {
-    if (failureCount >= 4) break;
-
-    const move = moves[i];
-    executeReverseMove(board, boardColors, playerPos, move, PLAYER);
-
-    let isValid = true;
-    let checkFrequency = 2;
-    if (currentDepth > targetDepth - 5) checkFrequency = 1;
-    if (isHighQuality) checkFrequency = 1;
-
-    if (currentDepth > 2 && currentDepth % checkFrequency === 0) {
-      const solveSteps = fastSolver(board, playerPos, indexToAxial, axialToIndex);
-      if (solveSteps < currentDepth) {
-        isValid = false;
-      }
-    }
-
-    if (isValid) {
-      if (growPathElegant(
-        board, boardColors, playerPos, indexToAxial, axialToIndex,
-        currentDepth + 1, targetDepth, startTime, originalTopPos, isHighQuality
-      )) {
-        return true;
-      }
-      failureCount++;
-    } else {
-      failureCount++;
-    }
-
-    undoReverseMove(board, boardColors, playerPos, move);
-  }
-
-  return false;
-}
-
-// ── Async reverse-growth generator ──────────
-// NOTE: Keep in sync with growPathElegant (sync version above).
-// Differences: async function, scheduler param, await fastSolverAsync, await recursive call.
-
-export async function growPathElegantAsync(
+export async function growPathElegant(
   board, boardColors, playerPos, indexToAxial, axialToIndex,
   currentDepth, targetDepth, startTime, originalTopPos, isHighQuality,
   scheduler
@@ -222,14 +110,14 @@ export async function growPathElegantAsync(
     if (isHighQuality) checkFrequency = 1;
 
     if (currentDepth > 2 && currentDepth % checkFrequency === 0) {
-      const solveSteps = await fastSolverAsync(board, playerPos, indexToAxial, axialToIndex, scheduler);
+      const solveSteps = await fastSolver(board, playerPos, indexToAxial, axialToIndex, scheduler);
       if (solveSteps < currentDepth) {
         isValid = false;
       }
     }
 
     if (isValid) {
-      if (await growPathElegantAsync(
+      if (await growPathElegant(
         board, boardColors, playerPos, indexToAxial, axialToIndex,
         currentDepth + 1, targetDepth, startTime, originalTopPos, isHighQuality,
         scheduler
@@ -249,8 +137,8 @@ export async function growPathElegantAsync(
 
 // ── Level builder/extractor ──────────────────
 
-export function buildLevelData(board, boardColors, playerPos, indexToAxial, axialToIndex) {
-  const solutionPath = solveGameBFS(board, playerPos, indexToAxial, axialToIndex);
+export async function buildLevelData(board, boardColors, playerPos, indexToAxial, axialToIndex) {
+  const solutionPath = await solveGameBFS(board, playerPos, indexToAxial, axialToIndex);
 
   const levelData = {
     obstacles: [],

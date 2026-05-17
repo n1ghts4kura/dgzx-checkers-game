@@ -46,9 +46,10 @@ All game logic modules export stateless functions that receive board/mapping as 
 | `constants.js` | Board geometry (`ROWS_LAYOUT`), cell types, hex directions, jump factors, timing/scoring constants, rendering defaults, colors |
 | `board.js` | `createEmptyBoard()`, `createAxialMapping()` (index↔axial coord maps), `countObstacles()` |
 | `logic.js` | `canJumpTo()` (6-direction validation), `findAllJumpsFrom()`, `executeMove()` (immutable), `saveStateSnapshot()`, plus reverse-move functions for level generation |
-| `solver.js` | `solveGameBFS()` (state-space BFS with dynamic obstacle sets), `findSolutionPath()` (simple BFS on current board), `verifyUniqueSolution()` |
-| `generator.js` | `growPathElegant()` (recursive reverse-growth), `setupDefaultBoard()` (27-obstacle default level), `buildLevelData()`/`loadLevelIntoBoard()`, Base64 export/import |
+| `solver.js` | `solveGameBFS()` (state-space BFS with dynamic obstacle sets), `findSolutionPath()` (simple BFS on current board), `verifyUniqueSolution()`, plus async variants (`*Async`) with cooperative scheduling for level generation |
+| `generator.js` | `growPathElegant()` (recursive reverse-growth) and async `growPathElegantAsync()`, `setupDefaultBoard()` (27-obstacle default level), `buildLevelData()`/`loadLevelIntoBoard()`, Base64 export/import |
 | `penalties.js` | Penalty threshold calculation, settlement score (factor1 + factor2 → 0-100), score text formatting |
+| `scheduler.js` | `createScheduler(timeSliceMs)` — cooperative scheduling utility that yields to the event loop every N ms; used by async generator and solver to keep UI responsive |
 | `audio.js` | `playCaptureSound()` / `playVictorySound()` — Web Audio synthesis (H5) vs `uni.createInnerAudioContext()` (MP) |
 
 ### Hexagonal Board Model
@@ -107,8 +108,9 @@ Level data: `{ obstacles: [[r,c,color],...], player: [r,c], solutionPath: [[r,c]
 - **`pages/index/index.vue`** — Main game page. Owns all game state: board, timers, score, history, settlement. Orchestrates game loop: cover → play → victory → settlement. Handles cell tap routing. Also hosts share/delete dialogs (opacity transition via CSS `transition: opacity 180ms`), checks `pending_switch_to_last` on `onShow` to auto-switch to newly imported/generated maps.
 - **`pages/create/create.vue`** — Board creation: config card (step count, fixed-start toggle, high-quality toggle), mini hex board preview, generate + import buttons. Calls `growPathElegant()` directly via `setTimeout`, saves to storage with `pending_switch_to_last` flag, shows `CircleProgressDialog` during generation.
 - **`pages/load/load.vue`** — Import levels via Base64 code string with preview + name + confirm. Sets `pending_switch_to_last` after import so index page auto-switches.
+- **`pages/info/info.vue`** — "About us" article page with project intro, dev team, tutorial link, and acknowledgments. Navigated from SidebarDrawer "关于我们..." link.
 - **`pages/config/config.vue`** — **Dead code.** Replaced by `pages/create/create.vue`. No listener in index page, no route from sidebar.
-- **`pages/settings/settings.vue`** — Author info only
+- **`pages/settings/settings.vue`** — Author info only. Listed in pages.json but not routed from sidebar.
 
 ## Design System (`common/`)
 
@@ -153,3 +155,16 @@ Key platform differences:
 - **Dialogs use CSS opacity transition** (not Vue `<transition>`): `.dialog-overlay` has `opacity: 0; pointer-events: none; transition: opacity 180ms ease;` with `&--visible` setting `opacity: 1; pointer-events: auto`. Same pattern used for both share and delete dialogs in `pages/index/index.vue`.
 - **Page transitions**: `App.vue` defines a global `@keyframes pageTransition` (400ms, 50% hold then fade-in) applied to the `page` element. All pages get this fade-in on navigation.
 - **Overlay positioning**: Index page overlays use `position: absolute` (page has `position: relative`). Cross-page overlays like `CircleProgressDialog` use `position: fixed`.
+
+## Dev Guard Skill
+
+This project has a dedicated development guard skill at `.claude/skills/dev-guard/SKILL.md`. It auto-triggers when developing new features, fixing bugs, or making adjustments. Load it manually via `/dev-guard`.
+
+Coverage:
+- **Module A**: .vue file ≤ 400 lines limit, game-core purity, component organization, page responsibilities
+- **Module B**: Platform research protocol — consult `docs/dev_docs/` before writing platform-specific code
+- **Module C**: Architecture boundary rules — three-layer architecture (pages → components → game-core), state flow
+- **Module D**: Pre-development checklist — 7 items before coding + 3 items after
+- **Module E**: Design system quick reference — color palette, glass morphism, fonts, spacing
+
+A PreToolUse hook (`.claude/settings.local.json`) enforces the 400-line .vue file limit. When blocked, extract sub-components into `components/` first, then retry the write.

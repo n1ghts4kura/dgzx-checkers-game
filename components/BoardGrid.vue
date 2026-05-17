@@ -256,7 +256,6 @@ export default {
 <style lang="scss" scoped>
 @import '../common/design-tokens';
 
-// ── Wrapper ──
 .board-grid-wrapper {
   flex: 1;
   display: flex;
@@ -265,7 +264,6 @@ export default {
   overflow: hidden;
 }
 
-// ── Base cell ──
 .board-cell {
   position: absolute;
   transform: translate(-50%, -50%);
@@ -295,7 +293,6 @@ export default {
   }
 }
 
-// ── Obstacle ──
 .board-cell--obstacle {
   &::before {
     background: var(--cell-bg-color);
@@ -303,7 +300,6 @@ export default {
   }
 }
 
-// ── Player ──
 .board-cell--player {
   z-index: 3;
   &::before {
@@ -326,7 +322,6 @@ export default {
   z-index: 1;
 }
 
-// ── Selected ──
 .board-cell--selected {
   z-index: 4;
   animation: selected-pulse 1.2s ease-in-out infinite;
@@ -341,7 +336,6 @@ export default {
   50% { transform: translate(-50%, -50%) scale(1.06); }
 }
 
-// ── Jump target ──
 .board-cell--jump-target {
   z-index: 3;
   &::before {
@@ -350,14 +344,11 @@ export default {
   }
 }
 
-// ── Win zone ──
 .board-cell--win-zone {
-  // Radial glow behind cell
   background: radial-gradient(circle, rgba(144, 238, 144, 0.35), transparent 65%);
   border-radius: 50%;
 }
 
-// ── Hint path ──
 .board-cell--hint {
   z-index: 5;
   &::before {
@@ -370,7 +361,6 @@ export default {
   }
 }
 
-// ── Hint label ──
 .cell-hint-label {
   position: absolute;
   top: 50%;
@@ -386,7 +376,6 @@ export default {
   pointer-events: none;
 }
 
-// ── Hint connector lines ──
 .hint-connector {
   position: absolute;
   height: 3px;
@@ -397,7 +386,6 @@ export default {
   border-radius: 2px;
 }
 
-// ── Jump preview connectors ──
 .jump-preview-connector {
   position: absolute;
   height: 2px;

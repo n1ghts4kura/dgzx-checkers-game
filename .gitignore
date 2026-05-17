@@ -7,4 +7,7 @@ unpackage/
 origin_game/
 
 # Claude Code
-.claude/
+.claude/*
+!.claude/skills/
+!.claude/hooks/
+!.claude/commands/

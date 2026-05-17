@@ -77,7 +77,8 @@ export function getDynamicJumpsFromSet(indexToAxial, axialToIndex, r, c, obstacl
 
 // ── BFS solver (state-space search) ──────────
 
-export function solveGameBFS(board, playerPos, indexToAxial, axialToIndex) {
+export async function solveGameBFS(board, playerPos, indexToAxial, axialToIndex, scheduler) {
+  const schedule = scheduler || { yieldIfNeeded: () => Promise.resolve() }
   const startObsStr = getBoardObsHash(board);
   const startHash = `${playerPos[0]},${playerPos[1]}${startObsStr}`;
 
@@ -96,6 +97,8 @@ export function solveGameBFS(board, playerPos, indexToAxial, axialToIndex) {
   while (queue.length > 0) {
     iterations++;
     if (iterations > MAX_BFS_ITERATIONS) return null;
+
+    await schedule.yieldIfNeeded();
 
     const current = queue.shift();
 
@@ -129,73 +132,8 @@ export function solveGameBFS(board, playerPos, indexToAxial, axialToIndex) {
   return null;
 }
 
-// ── Lightweight wrapper (step count) ─────────
-
-export function fastSolver(board, playerPos, indexToAxial, axialToIndex) {
-  const path = solveGameBFS(board, playerPos, indexToAxial, axialToIndex);
-  return path ? path.length - 1 : 0;
-}
-
-// ── Async variants with cooperative scheduling ──
-// NOTE: Keep in sync with sync versions above.
-// Differences: async keyword, scheduler param, await scheduler.yieldIfNeeded() in while loop.
-
-export async function solveGameBFSAsync(board, playerPos, indexToAxial, axialToIndex, scheduler) {
-  const startObsStr = getBoardObsHash(board);
-  const startHash = `${playerPos[0]},${playerPos[1]}${startObsStr}`;
-
-  const queue = [{
-    r: playerPos[0],
-    c: playerPos[1],
-    obsStr: startObsStr,
-    path: [[playerPos[0], playerPos[1]]]
-  }];
-
-  const visited = new Set();
-  visited.add(startHash);
-
-  let iterations = 0;
-
-  while (queue.length > 0) {
-    iterations++;
-    if (iterations > MAX_BFS_ITERATIONS) return null;
-
-    await scheduler.yieldIfNeeded();
-
-    const current = queue.shift();
-
-    if (current.r <= WIN_ROW_THRESHOLD) {
-      return current.path;
-    }
-
-    const currentObstacles = new Set(current.obsStr.split('|').filter(s => s !== ''));
-
-    const jumps = getDynamicJumpsFromSet(indexToAxial, axialToIndex, current.r, current.c, currentObstacles);
-
-    for (const [tr, tc, mr, mc] of jumps) {
-      const midKey = `${mr},${mc}`;
-      if (!currentObstacles.has(midKey)) continue;
-
-      const newObsStr = current.obsStr.replace(`|${midKey}|`, '|');
-      const nextHash = `${tr},${tc}${newObsStr}`;
-
-      if (!visited.has(nextHash)) {
-        visited.add(nextHash);
-        queue.push({
-          r: tr,
-          c: tc,
-          obsStr: newObsStr,
-          path: [...current.path, [tr, tc]]
-        });
-      }
-    }
-  }
-
-  return null;
-}
-
-export async function fastSolverAsync(board, playerPos, indexToAxial, axialToIndex, scheduler) {
-  const path = await solveGameBFSAsync(board, playerPos, indexToAxial, axialToIndex, scheduler);
+export async function fastSolver(board, playerPos, indexToAxial, axialToIndex, scheduler) {
+  const path = await solveGameBFS(board, playerPos, indexToAxial, axialToIndex, scheduler);
   return path ? path.length - 1 : 0;
 }
 
@@ -247,20 +185,20 @@ export function findSolutionPath(board, playerPos, indexToAxial, axialToIndex) {
 
 // ── Unique-solution verification ─────────────
 
-export function solveFromObstacleSet(playerPos, obstacleSet, indexToAxial, axialToIndex) {
+export async function solveFromObstacleSet(playerPos, obstacleSet, indexToAxial, axialToIndex) {
   const tempBoard = createEmptyBoard();
   for (const key of obstacleSet) {
     const [r, c] = key.split(',').map(Number);
     tempBoard[r][c] = OBSTACLE;
   }
   tempBoard[playerPos[0]][playerPos[1]] = PLAYER;
-  return solveGameBFS(tempBoard, playerPos, indexToAxial, axialToIndex);
+  return await solveGameBFS(tempBoard, playerPos, indexToAxial, axialToIndex);
 }
 
-export function verifyUniqueSolution(board, playerPos, indexToAxial, axialToIndex) {
+export async function verifyUniqueSolution(board, playerPos, indexToAxial, axialToIndex) {
   if (!playerPos) return false;
 
-  const solutionPath = solveGameBFS(board, playerPos, indexToAxial, axialToIndex);
+  const solutionPath = await solveGameBFS(board, playerPos, indexToAxial, axialToIndex);
   if (!solutionPath) return false;
 
   const pathLen = solutionPath.length - 1;
