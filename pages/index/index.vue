@@ -640,7 +640,22 @@ export default {
       } catch (e) {
         this.initDefaultLocalMaps()
       }
+      this.syncDefaultMapStr()
       this.levelNames = this.localMaps.map(m => m.map_name)
+    },
+
+    syncDefaultMapStr() {
+      const latest = this.buildDefaultMapStr()
+      let changed = false
+      for (let i = 0; i < this.localMaps.length; i++) {
+        if (this.localMaps[i].map_name === '决赛地图' && this.localMaps[i].map_str !== latest) {
+          this.localMaps[i].map_str = latest
+          changed = true
+        }
+      }
+      if (changed) {
+        uni.setStorageSync('local_maps', this.localMaps)
+      }
     },
 
     checkPendingSwitch() {
@@ -664,11 +679,14 @@ export default {
       } catch (e) { /* ignore */ }
     },
 
+    buildDefaultMapStr() {
+      return 'eyJvYnN0YWNsZXMiOltbNCw2LCIjRkZENzAwIl0sWzQsMTEsIiNGRjhDMDAiXSxbNSwxMywiI0ZGRDcwMCJdLFs2LDMsIiMzMjgyRkYiXSxbNiw1LCIjRkZENzAwIl0sWzYsOCwiI0EwMjBGMCJdLFs2LDEwLCIjRkY4QzAwIl0sWzcsNiwiI0RDMTQzQyJdLFs3LDgsIiNEQzE0M0MiXSxbOCw1LCIjRkY4QzAwIl0sWzgsNywiIzMyODJGRiJdLFs4LDEwLCIjRkZENzAwIl0sWzgsMTIsIiNEQzE0M0MiXSxbOSw1LCIjRkY4QzAwIl0sWzksOCwiI0RDMTQzQyJdLFsxMCwzLCIjRkZENzAwIl0sWzEwLDcsIiNGRkQ3MDAiXSxbMTAsMTEsIiNGRkQ3MDAiXSxbMTEsOCwiI0EwMjBGMCJdLFsxMSwxMiwiI0ZGOEMwMCJdLFsxMiwzLCIjRkZENzAwIl0sWzEyLDYsIiNBMDIwRjAiXSxbMTIsMTEsIiNGRkQ3MDAiXSxbMTMsNywiI0EwMjBGMCJdLFsxMyw5LCIjMzI4MkZGIl1dLCJwbGF5ZXIiOls4LDRdLCJzb2x1dGlvblBhdGgiOltbOCw0XSxbOCw2XSxbNiw3XSxbNiw5XSxbOCw4XSxbMTAsOV0sWzEwLDEzXSxbMTIsMTJdLFs0LDhdLFs0LDE0XSxbNiwxM10sWzYsN10sWzEyLDRdLFsxMiwyXSxbOCw0XSxbNCwyXSxbNCwxMF0sWzEyLDE0XSxbMTIsOF0sWzE0LDddLFs4LDEwXSxbOCw0XSxbMTYsOF0sWzEwLDExXSxbMTAsM10sWzIsN11dfQ=='
+    },
+
     initDefaultLocalMaps() {
-      const DEFAULT_MAP_STR = 'eyJvYnN0YWNsZXMiOltbNCw2LCIjRkZENzAwIl0sWzQsMTEsIiNGRjhDMDAiXSxbNSwxMywiI0ZGRDcwMCJdLFs2LDMsIiMzMjgyRkYiXSxbNiw1LCIjRkZENzAwIl0sWzYsOCwiI0EwMjBGMCJdLFs2LDEwLCIjRkY4QzAwIl0sWzcsNiwiI0RDMTQzQyJdLFs3LDgsIiNEQzE0M0MiXSxbOCw1LCIjRkY4QzAwIl0sWzgsNywiIzMyODJGRiJdLFs4LDEwLCIjRkZENzAwIl0sWzgsMTIsIiNEQzE0M0MiXSxbOSw1LCIjRkY4QzAwIl0sWzksOCwiI0RDMTQzQyJdLFsxMCwzLCIjRkZENzAwIl0sWzEwLDcsIiNGRkQ3MDAiXSxbMTAsMTEsIiNGRkQ3MDAiXSxbMTEsOCwiI0EwMjBGMCJdLFsxMSwxMiwiI0ZGOEMwMCJdLFsxMiwzLCIjRkZENzAwIl0sWzEyLDYsIiNBMDIwRjAiXSxbMTIsMTEsIiNGRkQ3MDAiXSxbMTMsNywiI0EwMjBGMCJdLFsxMyw5LCIjMzI4MkZGIl1dLCJwbGF5ZXIiOls4LDRdLCJzb2x1dGlvblBhdGgiOltbOCw0XSxbOCw2XSxbNiw3XSxbNiw5XSxbOCw4XSxbMTAsOV0sWzEwLDEzXSxbMTIsMTJdLFs0LDhdLFs0LDE0XSxbNiwxM10sWzYsN10sWzEyLDRdLFsxMiwyXSxbOCw0XSxbNCwyXSxbNCwxMF0sWzEyLDE0XSxbMTIsOF0sWzE0LDddLFs4LDEwXSxbOCw0XSxbMTYsOF0sWzEwLDExXSxbMTAsM10sWzIsN11dfQ=='
 
       this.localMaps = [
-        { map_name: '决赛地图', map_str: DEFAULT_MAP_STR }
+        { map_name: '决赛地图', map_str: this.buildDefaultMapStr() }
       ]
       uni.setStorageSync('local_maps', this.localMaps)
     },
