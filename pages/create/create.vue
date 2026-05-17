@@ -43,7 +43,7 @@
               class="create-input"
               type="text"
               v-model="mapName"
-              placeholder="输入棋盘名称"
+              placeholder="名称不要重复哦"
             />
           </view>
         </view>
@@ -58,7 +58,7 @@
               class="create-input"
               type="text"
               :value="stepCount"
-              placeholder="决赛使用的是20步!"
+              placeholder="[1,50) 比赛是20步!"
               @input="onStepInput"
             />
           </view>
@@ -123,7 +123,7 @@ export default {
   components: { GameAppBar, CircleProgressDialog },
   data() {
     return {
-      stepCount: '20',
+      stepCount: '',
       fixedStart: true,
       highQuality: true,
       mapName: '',
@@ -132,7 +132,9 @@ export default {
       dialogStatus: 'loading',
       generating: false,
       generatedLevel: null,
-      generatedBase64: null
+      generatedBase64: null,
+      failReason: '',
+      attemptCount: 0
     }
   },
   computed: {
@@ -214,7 +216,7 @@ export default {
       return {
         width: boardW + 'px',
         height: boardH + 'px',
-        transform: `scale(${scale})`,
+        transform: `scale(${scale * 0.8})`,
         transformOrigin: 'center center'
       }
     }
@@ -239,6 +241,8 @@ export default {
       this.generating = true
       this.generatedLevel = null
       this.generatedBase64 = null
+      this.failReason = ''
+      this.attemptCount = 0
       this.dialogVisible = true
       this.dialogStatus = 'loading'
 
@@ -246,7 +250,7 @@ export default {
 
       try {
         const rawDepth = parseInt(this.stepCount, 10) || 20
-        const targetDepth = Math.max(3, Math.min(50, rawDepth))
+        const targetDepth = Math.min(50, rawDepth)
         const isHighQuality = this.highQuality
         const fixedStart = this.fixedStart
         const timeout = Math.max(12000, targetDepth * 2000)
@@ -297,9 +301,12 @@ export default {
           return
         }
 
+        this.attemptCount = attempt
+        this.failReason = 'timeout'
         this.dialogStatus = 'failure'
       } catch (err) {
         console.error('Generation error:', err)
+        this.failReason = err && err.message ? err.message : String(err || 'unknown')
         this.dialogStatus = 'failure'
       }
       this.generating = false
@@ -310,7 +317,7 @@ export default {
         uni.showToast({ title: '请先生成棋盘', icon: 'none' })
         return
       }
-      const name = this.mapName.trim() || `自 ${parseInt(this.stepCount, 10) || 20}步`
+      const name = this.mapName.trim() || `${this.generatedLevel.solutionPath.length - 1}步棋盘`
 
       const localMaps = uni.getStorageSync('local_maps') || []
       localMaps.push({ map_name: name, map_str: this.generatedBase64 })
@@ -322,6 +329,23 @@ export default {
 
     onDialogDone() {
       this.dialogVisible = false
+      if (this.failReason === 'timeout') {
+        const tips = []
+        if (parseInt(this.stepCount, 10) > 20) tips.push('降低题解步数')
+        if (this.highQuality) tips.push('关闭"高质量地图"')
+        const advice = tips.length > 0 ? `建议：${tips.join('，')}` : ''
+        uni.showToast({
+          title: advice || '生成超时，请重试',
+          icon: 'none',
+          duration: 3000
+        })
+      } else if (this.failReason) {
+        uni.showToast({
+          title: `错误：${this.failReason}`,
+          icon: 'none',
+          duration: 4000
+        })
+      }
     }
   },
 

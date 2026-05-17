@@ -50,7 +50,7 @@
         >
           <view class="cover-layer__inner">
             <text class="cover-layer__icon">▶</text>
-            <text class="cover-layer__text">点击开始</text>
+            <text class="cover-layer__text">点击\n开始</text>
           </view>
         </view>
 
@@ -665,7 +665,7 @@ export default {
     },
 
     initDefaultLocalMaps() {
-      const DEFAULT_MAP_STR = 'eyJvYnN0YWNsZXMiOltbNyw2LCIjRkZENzAwIl0sWzgsNCwiI0RDMTQzQyJdLFsxMCw0LCIjRkZENzAwIl0sWzExLDYsIiNBMDIwRjAiXSxbMTQsOCwiIzMyODJGRiJdXSwicGxheWVyIjpbMTMsN10sInNvbHV0aW9uUGF0aCI6W1sxMyw3XSxbMTUsOF0sWzcsNF0sWzksM10sWzExLDRdLFszLDhdXX0='
+      const DEFAULT_MAP_STR = 'eyJvYnN0YWNsZXMiOltbNCw2LCIjRkZENzAwIl0sWzQsMTEsIiNGRjhDMDAiXSxbNSwxMywiI0ZGRDcwMCJdLFs2LDMsIiMzMjgyRkYiXSxbNiw1LCIjRkZENzAwIl0sWzYsOCwiI0EwMjBGMCJdLFs2LDEwLCIjRkY4QzAwIl0sWzcsNiwiI0RDMTQzQyJdLFs3LDgsIiNEQzE0M0MiXSxbOCw1LCIjRkY4QzAwIl0sWzgsNywiIzMyODJGRiJdLFs4LDEwLCIjRkZENzAwIl0sWzgsMTIsIiNEQzE0M0MiXSxbOSw1LCIjRkY4QzAwIl0sWzksOCwiI0RDMTQzQyJdLFsxMCwzLCIjRkZENzAwIl0sWzEwLDcsIiNGRkQ3MDAiXSxbMTAsMTEsIiNGRkQ3MDAiXSxbMTEsOCwiI0EwMjBGMCJdLFsxMSwxMiwiI0ZGOEMwMCJdLFsxMiwzLCIjRkZENzAwIl0sWzEyLDYsIiNBMDIwRjAiXSxbMTIsMTEsIiNGRkQ3MDAiXSxbMTMsNywiI0EwMjBGMCJdLFsxMyw5LCIjMzI4MkZGIl1dLCJwbGF5ZXIiOls4LDRdLCJzb2x1dGlvblBhdGgiOltbOCw0XSxbOCw2XSxbNiw3XSxbNiw5XSxbOCw4XSxbMTAsOV0sWzEwLDEzXSxbMTIsMTJdLFs0LDhdLFs0LDE0XSxbNiwxM10sWzYsN10sWzEyLDRdLFsxMiwyXSxbOCw0XSxbNCwyXSxbNCwxMF0sWzEyLDE0XSxbMTIsOF0sWzE0LDddLFs4LDEwXSxbOCw0XSxbMTYsOF0sWzEwLDExXSxbMTAsM10sWzIsN11dfQ=='
 
       this.localMaps = [
         { map_name: '决赛地图', map_str: DEFAULT_MAP_STR }

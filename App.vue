@@ -1,7 +1,6 @@
 <script>
 	export default {
 		onLaunch: function() {
-			console.log('App Launch')
 
 			// 加载字体 — H5 从本地文件 (common/fonts.css @font-face)
 			// 小程序从 Google Fonts CDN (wx.loadFontFace 需要网络 URL)
@@ -19,7 +18,6 @@
 			// #endif
 		},
 		onShow: function() {
-			console.log('App Show')
 		},
 		onHide: function() {
 			console.log('App Hide')

@@ -288,7 +288,12 @@ export function exportLevelToBase64(levelData) {
   return btoa(JSON.stringify(levelData));
   // #endif
   // #ifndef H5
-  return uni.arrayBufferToBase64(new TextEncoder().encode(JSON.stringify(levelData)));
+  const jsonStr = JSON.stringify(levelData);
+  const bytes = new Uint8Array(jsonStr.length);
+  for (let i = 0; i < jsonStr.length; i++) {
+    bytes[i] = jsonStr.charCodeAt(i);
+  }
+  return uni.arrayBufferToBase64(bytes.buffer);
   // #endif
 }
 
@@ -298,7 +303,12 @@ export function importLevelFromBase64(code) {
   // #endif
   // #ifndef H5
   const uint8Array = uni.base64ToArrayBuffer(code);
-  return JSON.parse(new TextDecoder().decode(uint8Array));
+  const bytes = new Uint8Array(uint8Array);
+  let str = '';
+  for (let i = 0; i < bytes.length; i++) {
+    str += String.fromCharCode(bytes[i]);
+  }
+  return JSON.parse(str);
   // #endif
 }
 

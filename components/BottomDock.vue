@@ -76,18 +76,22 @@ export default {
   border-top: 1px solid $color-glass-stroke;
   border-radius: 60rpx 60rpx 0 0;
   display: flex;
-  padding: 12rpx $sp-gutter;
-  padding-bottom: calc(12rpx + env(safe-area-inset-bottom));
-  gap: 12px;
-  height: 94px;
-  min-height: 94px;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8rpx 32rpx;
+  padding-bottom: calc(8rpx + env(safe-area-inset-bottom));
+  gap: 16rpx;
+  height: 72px;
+  min-height: 72px;
   flex-shrink: 0;
 }
 
 .dock-stats {
   width: 75%;
   display: flex;
-  gap: 12px;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12rpx;
   height: 100%;
 }
 
@@ -99,23 +103,23 @@ export default {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 6rpx;
+  padding: 2rpx;
 }
 
 .stat-label {
   font-family: $font-body;
-  font-size: $fs-label-bold;
-  line-height: $lh-label-bold;
+  font-size: 10px;
+  line-height: 14px;
   font-weight: 700;
   letter-spacing: $ls-label-bold;
   color: $color-on-surface-variant;
-  margin-bottom: 4rpx;
+  margin-bottom: 2rpx;
 }
 
 .stat-value {
   font-family: $font-headline;
-  font-size: $fs-headline-lg-mobile;
-  line-height: $lh-headline-lg-mobile;
+  font-size: 22px;
+  line-height: 28px;
   font-weight: 700;
 
   &--primary { color: $color-primary; }
@@ -130,14 +134,14 @@ export default {
   width: 25%;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8rpx;
   height: 100%;
 }
 
 .dock-actions__row {
   flex: 1;
   display: flex;
-  gap: 12px;
+  gap: 8rpx;
 }
 
 .action-btn {
@@ -167,11 +171,11 @@ export default {
 
 .action-label {
   font-family: $font-body;
-  font-size: $fs-label-bold;
-  line-height: $lh-label-bold;
+  font-size: 10px;
+  line-height: 14px;
   font-weight: 700;
   letter-spacing: $ls-label-bold;
-  margin-top: 4rpx;
+  margin-top: 2rpx;
 }
 
 @keyframes score-deduction-fade {
